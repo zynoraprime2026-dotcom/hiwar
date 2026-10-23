@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hadeeth — Arabic Conversation Tutor</title>
+  <meta name="description" content="Hadeeth (حديث): practice Arabic conversation with an AI tutor. Voice in, voice out, gentle corrections, real scenarios." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>" />
+</head>
+<body class="min-h-screen">
+  <div id="app" class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="flex items-center gap-3">
+          <div class="logo-mark"><span class="arabic">ح</span></div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight leading-none">Hadeeth</h1>
+            <p class="arabic text-sm leading-tight subtitle">تدرّب على المحادثة العربية</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div id="streak-chip" class="streak-chip" title="Practice streak">🔥 <span id="streak-count">0</span></div>
+          <button id="btn-mistakes" class="icon-btn" title="My common mistakes">📋</button>
+          <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Scenario + difficulty bar -->
+    <div class="controls-bar">
+      <div class="controls-inner">
+        <div class="control-group">
+          <label class="control-label">Scenario</label>
+          <select id="scenario-select" class="select">
+            <option value="greetings">Greetings & Introductions</option>
+            <option value="shopping">Shopping & Bargaining</option>
+            <option value="travel">Travel & Directions</option>
+            <option value="cafe">Café & Restaurant</option>
+            <option value="family">Family & Small Talk</option>
+            <option value="work">Work & Appointments</option>
+            <option value="free">Free Conversation</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label">Level</label>
+          <div id="difficulty" class="seg">
+            <button class="seg-btn" data-level="beginner">Beginner</button>
+            <button class="seg-btn active" data-level="intermediate">Intermediate</button>
+            <button class="seg-btn" data-level="advanced">Advanced</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-label">English</label>
+          <button id="btn-translation" class="toggle-btn on" title="Show/hide English translations">
+            <span class="knob"></span><span class="toggle-text">On</span>
+          </button>
+        </div>
+        <button id="btn-newchat" class="btn-ghost">New chat</button>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <main id="chat" class="chat flex-1"></main>
+
+    <!-- Composer -->
+    <footer class="composer">
+      <div class="composer-inner">
+        <button id="btn-mic" class="mic-btn" title="Speak in Arabic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        </button>
+        <div class="input-wrap">
+          <input id="input" type="text" placeholder="Type in Arabic… اكتب بالعربية" autocomplete="off" />
+          <div id="listening-pill" class="listening-pill hidden"><span class="pulse"></span> Listening…</div>
+        </div>
+        <button id="btn-send" class="send-btn" title="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <p class="hint">💡 Speak or type in Arabic. Click any assistant bubble to hear it. <button id="btn-open-settings" class="link">Connect your AI key</button> to start.</p>
+    </footer>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="modal-settings" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Settings</h2>
+        <button class="modal-close" data-close="modal-settings">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-note">Hadeeth talks to any OpenAI-compatible chat API. The easiest free option is <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a> — create a key and paste it below. Your key is stored only in your browser.</p>
+        <label class="field-label">API Base URL</label>
+        <input id="set-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" />
+        <label class="field-label">API Key</label>
+        <input id="set-apikey" type="password" placeholder="sk-or-…" />
+        <label class="field-label">Model</label>
+        <input id="set-model" type="text" placeholder="openai/gpt-4o-mini" />
+        <label class="check-label"><input id="set-tts" type="checkbox" checked /> Auto-speak assistant replies aloud</label>
+        <div class="modal-actions">
+          <button id="btn-save-settings" class="btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mistakes modal -->
+  <div id="modal-mistakes" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>My Common Mistakes</h2>
+        <button class="modal-close" data-close="modal-mistakes">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="mistakes-list" class="mistakes-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
