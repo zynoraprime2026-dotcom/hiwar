@@ -1,8 +1,8 @@
-# Hadeeth — حديث
+# Hiwar — حوار
 
 **An Arabic conversational app with an AI tutor to improve your speaking skills.**
 
-Hadeeth means "conversation" (حديث) — and that's exactly what this app is: a judgment-free
+Hiwar means "dialogue" (حوار) — and that's exactly what this app is: a judgment-free
 space to practice Modern Standard Arabic by talking with a patient AI tutor.
 
 ## ✨ Features
@@ -31,7 +31,7 @@ npx serve .
 
 ## 🔑 Connect your AI
 
-Hadeeth talks to any OpenAI-compatible chat API:
+Hiwar talks to any OpenAI-compatible chat API:
 
 1. Create a key at [openrouter.ai/keys](https://openrouter.ai/keys) (free tier available)
 2. Open **Settings ⚙️** in the app and paste it

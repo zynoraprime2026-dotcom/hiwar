@@ -1,5 +1,5 @@
 /* ================================================================
-   Hadeeth (حديث) — Arabic Conversation Tutor
+   Hiwar (حوار) — Arabic Conversation Tutor
    Chat UI, AI tutor (OpenAI-compatible API), voice in/out,
    streak + mistake tracking. All state in localStorage.
    ================================================================ */
@@ -8,10 +8,10 @@
 
 /* ---------------- State ---------------- */
 const LS = {
-  settings: "hadeeth_settings",
-  streak: "hadeeth_streak",
-  mistakes: "hadeeth_mistakes",
-  history: "hadeeth_history",
+  settings: "hiwar_settings",
+  streak: "hiwar_streak",
+  mistakes: "hiwar_mistakes",
+  history: "hiwar_history",
 };
 
 const state = {
@@ -33,7 +33,7 @@ const SCENARIOS = {
   greetings: {
     label: "Greetings & Introductions",
     opener: "أهلاً وسهلاً! أنا أستاذ حديث. ما اسمك؟",
-    en: "Welcome! I'm Ustadh Hadeeth. What is your name?",
+    en: "Welcome! I'm Ustadh Hiwar. What is your name?",
     brief: "The user greets you and introduces themselves. Ask their name, where they are from, and what they do.",
   },
   shopping: {
@@ -289,7 +289,7 @@ function toggleMic() {
 function systemPrompt() {
   const sc = SCENARIOS[state.scenario];
   return [
-    "You are Hadeeth (حديث), a warm, patient Arabic conversation tutor for foreign learners.",
+    "You are Hiwar (حوار), a warm, patient Arabic conversation tutor for foreign learners.",
     "You ONLY converse in Modern Standard Arabic (فصحى), never dialects.",
     LEVEL_GUIDE[state.level],
     `Current role-play scenario: ${sc.label}. ${sc.brief}`,
@@ -329,8 +329,8 @@ async function callAI() {
     Authorization: "Bearer " + apiKey,
   };
   if (/openrouter/i.test(baseUrl)) {
-    headers["HTTP-Referer"] = location.origin || "https://hadeeth.app";
-    headers["X-Title"] = "Hadeeth Arabic Tutor";
+    headers["HTTP-Referer"] = location.origin || "https://hiwar.app";
+    headers["X-Title"] = "Hiwar Arabic Tutor";
   }
   const res = await fetch(url, {
     method: "POST",
