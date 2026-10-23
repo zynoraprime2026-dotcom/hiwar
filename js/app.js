@@ -859,7 +859,14 @@ async function openWordPopup(token, sentence) {
   openModal("modal-word");
 
   if (!state.settings.apiKey) {
-    $("word-meaning").textContent = "Add your API key in Settings to look up words.";
+    const hit = findInDictionary(word);
+    if (hit) {
+      currentWord.meaning = (DICT_POS[hit.pos] || hit.pos) + ": " + hit.en;
+      $("word-meaning").textContent = currentWord.meaning;
+      $("btn-word-save").disabled = false;
+    } else {
+      $("word-meaning").textContent = "Add your API key in Settings for full lookups — or find the word in the built-in dictionary (📖).";
+    }
     return;
   }
   try {
@@ -877,6 +884,107 @@ async function openWordPopup(token, sentence) {
   } catch (err) {
     $("word-meaning").textContent = "Lookup failed: " + err.message;
   }
+}
+
+/* ---------------- Dictionary (browse alif to yāʾ + search) ---------------- */
+const dictView = { letter: "ا", search: "" };
+
+function openDictionary() {
+  $("chat").classList.add("hidden");
+  $("composer").classList.add("hidden");
+  $("repeat-panel").classList.add("hidden");
+  $("dict-panel").classList.remove("hidden");
+  renderDictLetters();
+  renderDictResults();
+}
+
+function closeDictionary() {
+  $("dict-panel").classList.add("hidden");
+  $("chat").classList.remove("hidden");
+  $("composer").classList.remove("hidden");
+}
+
+function renderDictLetters() {
+  const wrap = $("dict-letters");
+  const counts = dictCounts();
+  wrap.innerHTML = "";
+  for (const l of DICT_LETTERS) {
+    const btn = document.createElement("button");
+    const active = !dictView.search && dictView.letter === l;
+    btn.className = "dict-letter-btn" + (active ? " active" : "");
+    btn.dataset.letter = l;
+    btn.title = "Words starting with " + l;
+    btn.innerHTML = `${l}<span class="cnt">${counts[l] || 0}</span>`;
+    btn.addEventListener("click", () => {
+      dictView.letter = l;
+      dictView.search = "";
+      $("dict-search").value = "";
+      $("btn-dict-clear").classList.add("hidden");
+      renderDictLetters();
+      renderDictResults();
+    });
+    wrap.appendChild(btn);
+  }
+}
+
+function renderDictResults() {
+  const list = $("dict-list");
+  const status = $("dict-status");
+  list.innerHTML = "";
+  let entries;
+  if (dictView.search) {
+    entries = searchDictionary(dictView.search);
+    status.textContent = `${entries.length} result${entries.length === 1 ? "" : "s"} for “${dictView.search}”`;
+  } else {
+    entries = entriesByLetter(dictView.letter);
+    status.textContent = `Letter ${dictView.letter} — ${entries.length} words`;
+  }
+  if (!entries.length) {
+    list.innerHTML = '<p class="dict-empty">No words found. Try another spelling, or search in English.</p>';
+    return;
+  }
+  for (const e of entries) list.appendChild(dictWordCard(e));
+}
+
+function dictWordCard(e) {
+  const card = document.createElement("div");
+  card.className = "dict-word";
+  const top = document.createElement("div");
+  top.className = "dict-word-top";
+  const ar = document.createElement("div");
+  ar.className = "dict-word-ar";
+  ar.textContent = e.ar;
+  ar.title = "Tap to hear it";
+  ar.addEventListener("click", () => speakArabic(e.ar));
+  const pos = document.createElement("span");
+  pos.className = "dict-word-pos";
+  pos.textContent = DICT_POS[e.pos] || e.pos;
+  top.appendChild(ar);
+  top.appendChild(pos);
+  card.appendChild(top);
+  const tr = document.createElement("div");
+  tr.className = "dict-word-tr";
+  tr.textContent = e.tr;
+  card.appendChild(tr);
+  const en = document.createElement("div");
+  en.className = "dict-word-en";
+  en.textContent = e.en;
+  card.appendChild(en);
+  const actions = document.createElement("div");
+  actions.className = "dict-word-actions";
+  const speakBtn = document.createElement("button");
+  speakBtn.textContent = "🔊 Listen";
+  speakBtn.addEventListener("click", () => speakArabic(e.ar));
+  const saveBtn = document.createElement("button");
+  saveBtn.textContent = "💾 Save";
+  saveBtn.addEventListener("click", () => {
+    const saved = saveVocabWord(e.ar, e.en, "");
+    showToast(saved ? "✅ Saved " + e.ar + " to your vocabulary" : e.ar + " is already in your vocabulary");
+  });
+  actions.appendChild(speakBtn);
+  actions.appendChild(saveBtn);
+  card.appendChild(actions);
+  return card;
 }
 
 /* ---------------- Session summary ---------------- */
@@ -1022,6 +1130,23 @@ function init() {
     openModal("modal-study");
   });
 
+  // Dictionary: browse alif to yāʾ, or search
+  $("btn-dictionary").addEventListener("click", openDictionary);
+  $("btn-dict-close").addEventListener("click", closeDictionary);
+  $("dict-search").addEventListener("input", (e) => {
+    dictView.search = e.target.value.trim();
+    $("btn-dict-clear").classList.toggle("hidden", !dictView.search);
+    renderDictLetters();
+    renderDictResults();
+  });
+  $("btn-dict-clear").addEventListener("click", () => {
+    dictView.search = "";
+    $("dict-search").value = "";
+    $("btn-dict-clear").classList.add("hidden");
+    renderDictLetters();
+    renderDictResults();
+  });
+
   // Study: quizzes + word save
   $("btn-quiz-vocab").addEventListener("click", startVocabQuiz);
   $("btn-quiz-mistakes").addEventListener("click", startMistakesQuiz);
@@ -1069,6 +1194,7 @@ function init() {
       document.querySelectorAll(".mode-btn").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
       state.mode = b.dataset.mode;
+      $("dict-panel").classList.add("hidden");
       if (state.mode === "repeat") enterRepeatMode();
       else exitRepeatMode();
     })

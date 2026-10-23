@@ -32,6 +32,7 @@
           <div id="goal-chip" class="streak-chip goal-chip" title="Daily practice goal — change it in Settings">🎯 <span id="goal-count">0/10</span></div>
           <button id="btn-summary" class="icon-btn" title="Session summary">🧾</button>
           <button id="btn-study" class="icon-btn" title="Study: mistakes, vocabulary & quizzes">📚</button>
+          <button id="btn-dictionary" class="icon-btn" title="Dictionary: browse alif to yāʾ or search">📖</button>
           <button id="btn-install" class="icon-btn" title="Install Hiwar on your phone">📥</button>
           <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
         </div>
@@ -113,6 +114,26 @@
           <p id="repeat-said" class="repeat-said"></p>
           <p id="repeat-missed" class="repeat-missed"></p>
         </div>
+      </div>
+    </section>
+
+    <!-- Dictionary panel: browse alif to yāʾ + search -->
+    <section id="dict-panel" class="dict-wrap flex-1 hidden">
+      <div class="dict-card">
+        <div class="dict-head">
+          <div>
+            <h2 class="dict-title">Dictionary <span class="arabic">قاموس</span></h2>
+            <p class="dict-sub">Browse by letter, alif to yāʾ — or search in Arabic or English</p>
+          </div>
+          <button id="btn-dict-close" class="repeat-btn">← Back to chat</button>
+        </div>
+        <div class="dict-searchwrap">
+          <input id="dict-search" class="dict-search" type="text" placeholder="Search… ابحث بالعربية أو الإنجليزية" autocomplete="off" />
+          <button id="btn-dict-clear" class="dict-clear hidden">×</button>
+        </div>
+        <div id="dict-letters" class="dict-letters"></div>
+        <div id="dict-status" class="dict-status"></div>
+        <div id="dict-list" class="dict-list"></div>
       </div>
     </section>
 
@@ -249,6 +270,7 @@
     </div>
   </div>
 
+  <script src="js/dictionary.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
