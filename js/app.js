@@ -15,6 +15,7 @@ const LS = {
   mistakes: "hiwar_mistakes",
   history: "hiwar_history",
   vocab: "hiwar_vocab",
+  goal: "hiwar_goal",
 };
 
 const state = {
@@ -23,6 +24,7 @@ const state = {
     apiKey: "",
     model: "openai/gpt-4o-mini",
     tts: true,
+    goal: 10,
   },
   scenario: "greetings",
   level: "intermediate",
@@ -138,6 +140,36 @@ function touchStreak() {
 }
 function renderStreak() {
   $("streak-count").textContent = getStreak().days;
+}
+
+/* ---------------- Daily goal ---------------- */
+function getGoalProgress() {
+  const today = new Date().toISOString().slice(0, 10);
+  const p = loadLS(LS.goal, { date: today, count: 0 });
+  if (p.date !== today) return { date: today, count: 0 };
+  return p;
+}
+function renderGoalChip() {
+  const p = getGoalProgress();
+  $("goal-count").textContent = Math.min(p.count, state.settings.goal) + "/" + state.settings.goal;
+  $("goal-chip")?.classList.toggle("done", p.count >= state.settings.goal);
+}
+function touchGoal() {
+  const p = getGoalProgress();
+  p.count += 1;
+  saveLS(LS.goal, p);
+  renderGoalChip();
+  const done = p.count >= state.settings.goal;
+  $("goal-chip")?.classList.toggle("done", done);
+  if (p.count === state.settings.goal) showToast("🎯 Daily goal reached — great work!");
+}
+function showToast(text) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add("show"), 30);
+  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 400); }, 3800);
 }
 
 /* ---------------- Mistakes & vocabulary ---------------- */
@@ -659,6 +691,7 @@ async function sendMessage(textOverride) {
   $("input").value = "";
   addMessage({ role: "user", ar: text, en: "", tr: "", feedback: "none" });
   state.session.messages += 1;
+  touchGoal();
   state.busy = true;
   $("btn-send").disabled = true;
   addTyping();
@@ -791,6 +824,7 @@ function handleRepeatAttempt(saidText) {
   $("repeat-missed").textContent = missed.length ? "Words to work on: " + missed.join(" ") : "";
   $("repeat-result").classList.remove("hidden");
   touchStreak();
+  touchGoal();
 }
 
 let previousPhrase = null;
@@ -891,6 +925,7 @@ function openSettings() {
   $("set-baseurl").value = state.settings.baseUrl;
   $("set-apikey").value = state.settings.apiKey;
   $("set-model").value = state.settings.model;
+  $("set-goal").value = state.settings.goal;
   $("set-tts").checked = state.settings.tts;
   openModal("modal-settings");
 }
@@ -898,8 +933,10 @@ function saveSettingsFromModal() {
   state.settings.baseUrl = $("set-baseurl").value.trim() || "https://openrouter.ai/api/v1";
   state.settings.apiKey = $("set-apikey").value.trim();
   state.settings.model = $("set-model").value.trim() || "openai/gpt-4o-mini";
+  state.settings.goal = Math.min(100, Math.max(1, parseInt($("set-goal").value, 10) || 10));
   state.settings.tts = $("set-tts").checked;
   saveSettings();
+  renderGoalChip();
   closeModal("modal-settings");
 }
 
@@ -916,6 +953,7 @@ function newConversation() {
 function init() {
   loadSettings();
   renderStreak();
+  renderGoalChip();
 
   // Restore last conversation if same scenario
   const saved = loadLS(LS.history, null);

@@ -29,6 +29,7 @@
         </div>
         <div class="flex items-center gap-2">
           <div id="streak-chip" class="streak-chip" title="Practice streak">🔥 <span id="streak-count">0</span></div>
+          <div id="goal-chip" class="streak-chip goal-chip" title="Daily practice goal — change it in Settings">🎯 <span id="goal-count">0/10</span></div>
           <button id="btn-summary" class="icon-btn" title="Session summary">🧾</button>
           <button id="btn-study" class="icon-btn" title="Study: mistakes, vocabulary & quizzes">📚</button>
           <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
@@ -147,6 +148,8 @@
         <input id="set-apikey" type="password" placeholder="sk-or-…" />
         <label class="field-label">Model</label>
         <input id="set-model" type="text" placeholder="openai/gpt-4o-mini" />
+        <label class="field-label">Daily goal (practice steps per day)</label>
+        <input id="set-goal" type="number" min="1" max="100" value="10" />
         <label class="check-label"><input id="set-tts" type="checkbox" checked /> Auto-speak assistant replies aloud</label>
         <div class="modal-actions">
           <button id="btn-save-settings" class="btn-primary">Save</button>
