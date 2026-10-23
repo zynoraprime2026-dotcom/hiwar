@@ -32,6 +32,7 @@
           <div id="goal-chip" class="streak-chip goal-chip" title="Daily practice goal — change it in Settings">🎯 <span id="goal-count">0/10</span></div>
           <button id="btn-summary" class="icon-btn" title="Session summary">🧾</button>
           <button id="btn-study" class="icon-btn" title="Study: mistakes, vocabulary & quizzes">📚</button>
+          <button id="btn-install" class="icon-btn" title="Install Hiwar on your phone">📥</button>
           <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
         </div>
       </div>
@@ -131,6 +132,32 @@
       </div>
       <p class="hint">💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it. <button id="btn-open-settings" class="link">Connect your AI key</button> to start.</p>
     </footer>
+  </div>
+
+  <!-- Install instructions modal -->
+  <div id="modal-install" class="modal hidden">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-head">
+        <h2>Install Hiwar</h2>
+        <button class="modal-close" data-close="modal-install">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-note">Install Hiwar like a regular app — it gets its own icon, opens full-screen, and works offline.</p>
+        <div class="install-steps">
+          <h3>🤖 Android (Chrome)</h3>
+          <ol>
+            <li>Tap the <b>⋮</b> menu (top-right of Chrome)</li>
+            <li>Tap <b>Install app</b> or <b>Add to Home screen</b></li>
+          </ol>
+          <h3>🍎 iPhone / iPad (Safari)</h3>
+          <ol>
+            <li>Tap the <b>Share</b> button <span class="arabic">(⬆️)</span></li>
+            <li>Scroll down and tap <b>Add to Home Screen</b></li>
+            <li>Tap <b>Add</b></li>
+          </ol>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Settings modal -->

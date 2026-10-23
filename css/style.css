@@ -369,3 +369,8 @@ body {
   z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,.35); pointer-events: none;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Install modal ---------- */
+.install-steps h3 { font-size: 14px; margin: 14px 0 8px; }
+.install-steps ol { margin: 0; padding-right: 18px; }
+.install-steps li { font-size: 14px; line-height: 1.8; color: var(--text-dim); }

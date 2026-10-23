@@ -949,6 +949,39 @@ function newConversation() {
   addMessage({ role: "assistant", ar: sc.opener, en: sc.en, tr: "", feedback: "none" }, { noSpeakTag: true });
 }
 
+/* ---------------- Install (PWA) ---------------- */
+let deferredInstall = null;
+function isStandalone() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: minimal-ui)").matches ||
+    navigator.standalone === true
+  );
+}
+function initInstall() {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstall = e;
+    $("btn-install").classList.remove("hidden");
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredInstall = null;
+    $("btn-install").classList.add("hidden");
+    showToast("✅ Hiwar installed!");
+  });
+  if (isStandalone()) $("btn-install").classList.add("hidden");
+  $("btn-install").addEventListener("click", async () => {
+    if (deferredInstall) {
+      deferredInstall.prompt();
+      const choice = await deferredInstall.userChoice.catch(() => null);
+      if (choice?.outcome === "accepted") $("btn-install").classList.add("hidden");
+      deferredInstall = null;
+    } else {
+      openModal("modal-install");
+    }
+  });
+}
+
 /* ---------------- Init ---------------- */
 function init() {
   loadSettings();
@@ -968,6 +1001,7 @@ function init() {
   if ("serviceWorker" in navigator && location.protocol === "https:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
+  initInstall();
 
   // Chat composer
   $("btn-send").addEventListener("click", () => sendMessage());
