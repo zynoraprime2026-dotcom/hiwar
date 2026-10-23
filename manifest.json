@@ -1,0 +1,16 @@
+{
+  "name": "Hiwar — Arabic Conversation Tutor",
+  "short_name": "Hiwar",
+  "description": "Practice Arabic conversation with a patient AI tutor. Voice in/out, gentle corrections, listen & repeat, vocab and quizzes.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#2dd4bf",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

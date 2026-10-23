@@ -1,6 +1,8 @@
 /* ================================================================
    Hiwar (حوار) — Arabic Conversation Tutor
    Chat UI, AI tutor (OpenAI-compatible API), voice in/out,
+   listen & repeat with pronunciation scoring, dialects,
+   tap-to-learn vocabulary, quizzes, transliteration,
    streak + mistake tracking. All state in localStorage.
    ================================================================ */
 
@@ -12,6 +14,7 @@ const LS = {
   streak: "hiwar_streak",
   mistakes: "hiwar_mistakes",
   history: "hiwar_history",
+  vocab: "hiwar_vocab",
 };
 
 const state = {
@@ -23,16 +26,20 @@ const state = {
   },
   scenario: "greetings",
   level: "intermediate",
+  dialect: "msa",
+  mode: "chat", // chat | repeat
   translations: true,
-  messages: [], // {role: 'user'|'assistant', ar, en, feedback}
+  translit: false,
+  messages: [], // {role, ar, en, tr, feedback}
   busy: false,
   listening: false,
+  session: { messages: 0, mistakes: 0, vocab: 0, startedAt: Date.now() },
 };
 
 const SCENARIOS = {
   greetings: {
     label: "Greetings & Introductions",
-    opener: "أهلاً وسهلاً! أنا أستاذ حديث. ما اسمك؟",
+    opener: "أهلاً وسهلاً! أنا أستاذ حوار. ما اسمك؟",
     en: "Welcome! I'm Ustadh Hiwar. What is your name?",
     brief: "The user greets you and introduces themselves. Ask their name, where they are from, and what they do.",
   },
@@ -75,10 +82,18 @@ const SCENARIOS = {
 };
 
 const LEVEL_GUIDE = {
-  beginner: "The user is a BEGINNER. Use only very simple MSA sentences (under 8 words), high-frequency vocabulary, and full vocalization (tashkeel) on words. Speak slowly in style.",
-  intermediate: "The user is INTERMEDIATE. Use natural MSA with common everyday vocabulary and varied sentence structures. Occasional idioms are fine if explained.",
-  advanced: "The user is ADVANCED. Use rich, natural MSA including idioms, nuanced expressions, and more complex structures.",
+  beginner: "The user is a BEGINNER. Use only very simple sentences (under 8 words), high-frequency vocabulary, and full vocalization (tashkeel) on every word.",
+  intermediate: "The user is INTERMEDIATE. Use natural everyday vocabulary and varied sentence structures. Occasional idioms are fine if explained.",
+  advanced: "The user is ADVANCED. Use rich, natural Arabic including idioms, nuanced expressions, and more complex structures.",
 };
+
+const DIALECT_GUIDE = {
+  msa: "Speak Modern Standard Arabic (فصحى) only.",
+  egyptian: "Speak Egyptian colloquial Arabic (العامية المصرية) — everyday Cairene Egyptian.",
+  levantine: "Speak Levantine colloquial Arabic (العامية الشامية) — everyday Syrian/Lebanese/Jordanian style.",
+};
+
+const SR_LOCALE = { msa: "ar-SA", egyptian: "ar-EG", levantine: "ar-LB" };
 
 /* ---------------- Utilities ---------------- */
 const $ = (id) => document.getElementById(id);
@@ -101,6 +116,12 @@ function loadSettings() {
 }
 function saveSettings() { saveLS(LS.settings, state.settings); }
 
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+}
+
 /* ---------------- Streak ---------------- */
 function getStreak() {
   return loadLS(LS.streak, { days: 0, lastDate: null });
@@ -119,10 +140,8 @@ function renderStreak() {
   $("streak-count").textContent = getStreak().days;
 }
 
-/* ---------------- Mistakes ---------------- */
-function getMistakes() {
-  return loadLS(LS.mistakes, []);
-}
+/* ---------------- Mistakes & vocabulary ---------------- */
+function getMistakes() { return loadLS(LS.mistakes, []); }
 function recordMistake(userText, note) {
   const mistakes = getMistakes();
   const norm = userText.trim().slice(0, 120);
@@ -135,34 +154,201 @@ function recordMistake(userText, note) {
     mistakes.unshift({ ar: norm, note, count: 1, date: new Date().toISOString() });
   }
   saveLS(LS.mistakes, mistakes.slice(0, 40));
+  state.session.mistakes += 1;
 }
-function renderMistakes() {
-  const wrap = $("mistakes-list");
+function getVocab() { return loadLS(LS.vocab, []); }
+function saveVocabWord(word, meaning, sentence) {
+  const vocab = getVocab();
+  const norm = word.trim();
+  if (vocab.some((v) => v.word === norm)) return false;
+  vocab.unshift({ word: norm, meaning, sentence: sentence || "", date: new Date().toISOString(), seen: 1 });
+  saveLS(LS.vocab, vocab.slice(0, 200));
+  state.session.vocab += 1;
+  return true;
+}
+
+/* ---------------- Study modal (mistakes + vocab lists) ---------------- */
+function renderStudyLists() {
+  // mistakes
   const mistakes = getMistakes();
-  wrap.innerHTML = "";
+  const mWrap = $("mistakes-list");
+  $("mistakes-n").textContent = mistakes.length;
+  mWrap.innerHTML = "";
   if (!mistakes.length) {
-    wrap.innerHTML = '<p class="empty-note">No mistakes recorded yet. Practice more — mistakes are how we learn! 🌱</p>';
+    mWrap.innerHTML = '<p class="empty-note">No mistakes recorded yet. Practice more — mistakes are how we learn! 🌱</p>';
+  } else {
+    for (const m of mistakes.slice(0, 15)) {
+      const card = document.createElement("div");
+      card.className = "mistake-card";
+      card.innerHTML = `<div class="m-count">× ${m.count}</div>
+        <div class="m-ar">${escapeHtml(m.ar)}</div>
+        <div class="m-note">${escapeHtml(m.note)}</div>`;
+      mWrap.appendChild(card);
+    }
+  }
+  // vocabulary
+  const vocab = getVocab();
+  const vWrap = $("vocab-list");
+  $("vocab-n").textContent = vocab.length;
+  vWrap.innerHTML = "";
+  if (!vocab.length) {
+    vWrap.innerHTML = '<p class="empty-note">Tap any word in the tutor\'s replies to look it up and save it here.</p>';
+  } else {
+    for (const v of vocab.slice(0, 30)) {
+      const card = document.createElement("div");
+      card.className = "mistake-card";
+      card.innerHTML = `<div class="m-ar">${escapeHtml(v.word)}
+          <button class="word-del" data-word="${escapeHtml(v.word)}" title="Remove">×</button></div>
+        <div class="m-note">${escapeHtml(v.meaning)}</div>`;
+      vWrap.appendChild(card);
+    }
+    vWrap.querySelectorAll(".word-del").forEach((b) =>
+      b.addEventListener("click", () => {
+        const w = b.dataset.word;
+        saveLS(LS.vocab, getVocab().filter((v) => v.word !== w));
+        renderStudyLists();
+      })
+    );
+  }
+}
+
+/* ---------------- Quizzes ---------------- */
+const quiz = { type: null, items: [], idx: 0, score: 0, order: [], front: true };
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startVocabQuiz() {
+  const vocab = getVocab();
+  if (vocab.length < 4) {
+    alert("Save at least 4 words to your vocabulary first (tap words in the tutor's replies).");
     return;
   }
-  for (const m of mistakes.slice(0, 15)) {
-    const card = document.createElement("div");
-    card.className = "mistake-card";
-    card.innerHTML = `
-      <div class="m-count">× ${m.count}</div>
-      <div class="m-ar">${escapeHtml(m.ar)}</div>
-      <div class="m-note">${escapeHtml(m.note)}</div>
-    `;
-    wrap.appendChild(card);
+  quiz.type = "vocab";
+  quiz.items = shuffle(vocab).slice(0, 10);
+  quiz.idx = 0;
+  quiz.score = 0;
+  showQuizArea();
+  renderVocabQuestion();
+}
+
+function renderVocabQuestion() {
+  const item = quiz.items[quiz.idx];
+  $("quiz-progress").textContent = `Question ${quiz.idx + 1} / ${quiz.items.length}`;
+  $("quiz-word").textContent = item.word;
+  $("quiz-feedback").textContent = "";
+  $("quiz-feedback").className = "quiz-feedback";
+  $("quiz-next").classList.add("hidden");
+  $("quiz-done").classList.add("hidden");
+
+  const distractors = shuffle(getVocab().filter((v) => v.word !== item.word)).slice(0, 3);
+  const options = shuffle([item, ...distractors]);
+  const wrap = $("quiz-options");
+  wrap.innerHTML = "";
+  for (const opt of options) {
+    const btn = document.createElement("button");
+    btn.className = "quiz-option";
+    btn.textContent = opt.meaning;
+    btn.addEventListener("click", () => {
+      if (btn.dataset.done) return;
+      document.querySelectorAll(".quiz-option").forEach((o) => {
+        o.dataset.done = "1";
+        o.classList.add(o.dataset.word === item.word ? "correct" : "dim");
+      });
+      const correct = opt.word === item.word;
+      if (correct) {
+        quiz.score += 1;
+        $("quiz-feedback").textContent = "✅ Correct!";
+      } else {
+        $("quiz-feedback").textContent = "❌ Correct answer: " + item.meaning;
+      }
+      $("quiz-feedback").className = "quiz-feedback " + (correct ? "good" : "bad");
+      if (quiz.idx + 1 < quiz.items.length) $("quiz-next").classList.remove("hidden");
+      else finishQuiz();
+    });
+    btn.dataset.word = opt.word;
+    wrap.appendChild(btn);
   }
+}
+
+function startMistakesQuiz() {
+  const mistakes = getMistakes();
+  if (!mistakes.length) {
+    alert("No mistakes recorded yet — chat with the tutor first.");
+    return;
+  }
+  quiz.type = "mistakes";
+  quiz.items = shuffle(mistakes).slice(0, 12);
+  quiz.idx = 0;
+  quiz.score = 0;
+  showQuizArea();
+  renderMistakesCard();
+}
+
+function renderMistakesCard() {
+  const item = quiz.items[quiz.idx];
+  $("quiz-progress").textContent = `Card ${quiz.idx + 1} / ${quiz.items.length}`;
+  $("quiz-word").textContent = item.ar;
+  $("quiz-word").classList.add("quiz-word-en");
+  $("quiz-feedback").textContent = "";
+  $("quiz-feedback").className = "quiz-feedback";
+  $("quiz-next").classList.add("hidden");
+  $("quiz-done").classList.add("hidden");
+
+  const wrap = $("quiz-options");
+  wrap.innerHTML = "";
+  const reveal = document.createElement("button");
+  reveal.className = "quiz-option";
+  reveal.textContent = "👆 Tap to see the correction";
+  reveal.addEventListener("click", () => {
+    reveal.textContent = item.note;
+    reveal.classList.add("revealed");
+    $("quiz-feedback").textContent = "Did you remember the fix?";
+    $("quiz-feedback").className = "quiz-feedback";
+    if (quiz.idx + 1 < quiz.items.length) $("quiz-next").classList.remove("hidden");
+    else finishQuiz();
+  });
+  wrap.appendChild(reveal);
+}
+
+function finishQuiz() {
+  $("quiz-word").textContent = "";
+  $("quiz-word").classList.remove("quiz-word-en");
+  $("quiz-options").innerHTML = "";
+  $("quiz-feedback").textContent = "";
+  const pct = Math.round((quiz.score / quiz.items.length) * 100);
+  $("quiz-done").classList.remove("hidden");
+  $("quiz-done").innerHTML = `
+    <p class="quiz-score">${quiz.score} / ${quiz.items.length} correct</p>
+    <p class="quiz-pct">${pct}%</p>
+    <p class="quiz-msg">${pct >= 80 ? "Excellent work! 🌟" : pct >= 50 ? "Good progress — keep going! 💪" : "Keep practicing, you'll get there. 🌱"}</p>`;
+  $("quiz-next").classList.add("hidden");
+}
+
+function showQuizArea() {
+  $("quiz-area").classList.remove("hidden");
+  $("study-lists").classList.add("hidden");
+  $("btn-quiz-vocab").classList.add("hidden");
+  $("btn-quiz-mistakes").classList.add("hidden");
+  $("btn-quiz-back").classList.remove("hidden");
+  if (quiz.type === "vocab") $("quiz-word").classList.remove("quiz-word-en");
+}
+function showStudyLists() {
+  $("quiz-area").classList.add("hidden");
+  $("study-lists").classList.remove("hidden");
+  $("btn-quiz-vocab").classList.remove("hidden");
+  $("btn-quiz-mistakes").classList.remove("hidden");
+  $("btn-quiz-back").classList.add("hidden");
+  $("quiz-done").classList.add("hidden");
 }
 
 /* ---------------- Chat rendering ---------------- */
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
-}
-
 function addMessage(msg, opts = {}) {
   if (!opts.skipPush) state.messages.push(msg);
   const chat = $("chat");
@@ -178,8 +364,31 @@ function addMessage(msg, opts = {}) {
 
   const ar = document.createElement("div");
   ar.className = "ar";
-  ar.textContent = msg.ar;
+  if (msg.role === "assistant") {
+    // tap-to-learn: wrap each word
+    for (const token of msg.ar.split(/(\s+)/)) {
+      if (!token) continue;
+      if (/^\s+$/.test(token)) { ar.appendChild(document.createTextNode(" ")); continue; }
+      const span = document.createElement("span");
+      span.className = "word";
+      span.textContent = token;
+      span.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openWordPopup(token, msg.ar);
+      });
+      ar.appendChild(span);
+    }
+  } else {
+    ar.textContent = msg.ar;
+  }
   bubble.appendChild(ar);
+
+  if (msg.role === "assistant" && state.translit && (msg.tr || msg.en)) {
+    const tr = document.createElement("div");
+    tr.className = "tr";
+    tr.textContent = msg.tr || translitFallback(msg.ar);
+    bubble.appendChild(tr);
+  }
 
   if (msg.en && (state.translations || msg.role === "user")) {
     const en = document.createElement("div");
@@ -236,7 +445,14 @@ function addMessage(msg, opts = {}) {
   wrap.appendChild(bubble);
   chat.appendChild(wrap);
   chat.scrollTop = chat.scrollHeight;
-  saveLS(LS.history, { scenario: state.scenario, messages: state.messages.slice(-40) });
+  if (!opts.skipPush) saveLS(LS.history, { scenario: state.scenario, messages: state.messages.slice(-40) });
+}
+
+function renderAll() {
+  const msgs = [...state.messages];
+  $("chat").innerHTML = "";
+  state.messages = [];
+  for (const m of msgs) addMessage(m, { skipPush: true });
 }
 
 function addTyping() {
@@ -248,8 +464,25 @@ function addTyping() {
   chat.appendChild(wrap);
   chat.scrollTop = chat.scrollHeight;
 }
-function removeTyping() {
-  $("typing")?.remove();
+function removeTyping() { $("typing")?.remove(); }
+
+/* ---------------- Transliteration (fallback) ---------------- */
+const TRANSLIT_MAP = {
+  "ا": "a", "ب": "b", "ت": "t", "ث": "th", "ج": "j", "ح": "ḥ", "خ": "kh",
+  "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s", "ش": "sh", "ص": "ṣ",
+  "ض": "ḍ", "ط": "ṭ", "ظ": "ẓ", "ع": "ʻ", "غ": "gh", "ف": "f", "ق": "q",
+  "ك": "k", "ل": "l", "م": "m", "ن": "n", "ه": "h", "و": "w", "ي": "y",
+  "ى": "a", "ة": "a", "ء": "'", "آ": "aa", "أ": "a", "إ": "i", "ؤ": "u", "ئ": "i",
+  "َ": "a", "ُ": "u", "ِ": "i", "ً": "an", "ٌ": "un", "ٍ": "in",
+};
+function translitFallback(text) {
+  let out = "";
+  for (const ch of String(text || "")) {
+    if (ch === "ّ") { out += out.slice(-1); continue; } // shadda: double previous
+    if (ch === "ـ") continue;
+    out += TRANSLIT_MAP[ch] ?? ch;
+  }
+  return out.replace(/\s+/g, " ").trim();
 }
 
 /* ---------------- Text-to-speech ---------------- */
@@ -257,7 +490,7 @@ let arabicVoice = null;
 function pickArabicVoice() {
   const voices = speechSynthesis.getVoices();
   arabicVoice =
-    voices.find((v) => /ar-(SA|EG|AE)/i.test(v.lang)) ||
+    voices.find((v) => new RegExp("^ar(-(" + state.dialect.slice(0,2).toUpperCase() + "|SA|EG|AE|LB))?$", "i").test(v.lang)) ||
     voices.find((v) => /^ar/i.test(v.lang)) ||
     null;
 }
@@ -268,9 +501,10 @@ function speakArabic(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ar-SA";
+    const locale = SR_LOCALE[state.dialect] || "ar-SA";
+    u.lang = locale === "ar-LB" ? "ar-SA" : locale;
     if (arabicVoice) u.voice = arabicVoice;
-    u.rate = state.level === "beginner" ? 0.85 : 0.95;
+    u.rate = state.level === "beginner" ? 0.8 : 0.95;
     speechSynthesis.speak(u);
   } catch (e) {
     console.warn("TTS failed", e);
@@ -287,8 +521,8 @@ if (SR) {
   recognition.maxAlternatives = 1;
   recognition.onresult = (e) => {
     const text = e.results[0][0].transcript;
-    $("input").value = text;
-    sendMessage(text);
+    if (state.mode === "repeat") handleRepeatAttempt(text);
+    else { $("input").value = text; sendMessage(text); }
   };
   recognition.onend = () => setListening(false);
   recognition.onerror = () => setListening(false);
@@ -297,40 +531,61 @@ function setListening(on) {
   state.listening = on;
   $("btn-mic").classList.toggle("rec", on);
   $("listening-pill").classList.toggle("hidden", !on);
+  $("btn-repeat-mic")?.classList.toggle("rec", on);
 }
-function toggleMic() {
+function startListening() {
   if (!recognition) {
     alert("Voice input isn't supported in this browser. Try Chrome or Edge.");
     return;
   }
-  if (state.listening) {
-    recognition.stop();
-    return;
+  if (state.listening) { recognition.stop(); return false; }
+  recognition.lang = SR_LOCALE[state.dialect] || "ar-SA";
+  try { recognition.start(); setListening(true); return true; } catch { return false; }
+}
+function toggleMic() { startListening(); }
+
+/* ---------------- AI plumbing ---------------- */
+function buildHeaders() {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: "Bearer " + state.settings.apiKey,
+  };
+  if (/openrouter/i.test(state.settings.baseUrl)) {
+    headers["HTTP-Referer"] = location.origin || "https://zynoraprime2026-dotcom.github.io";
+    headers["X-Title"] = "Hiwar Arabic Tutor";
   }
-  try { recognition.start(); setListening(true); } catch {}
+  return headers;
 }
 
-/* ---------------- AI ---------------- */
-function systemPrompt() {
-  const sc = SCENARIOS[state.scenario];
-  return [
-    "You are Hiwar (حوار), a warm, patient Arabic conversation tutor for foreign learners.",
-    "You ONLY converse in Modern Standard Arabic (فصحى), never dialects.",
-    LEVEL_GUIDE[state.level],
-    `Current role-play scenario: ${sc.label}. ${sc.brief}`,
-    "Keep replies short (1-3 sentences), natural, and always end with a question to keep the conversation flowing.",
-    "ALWAYS respond in EXACTLY this plain-text format, nothing else:",
-    "AR: <your Arabic reply>",
-    "EN: <English translation of your reply>",
-    "FEEDBACK: <if the user's last message had a grammar, vocabulary, or spelling mistake, briefly explain it in simple English and show the corrected Arabic; if it was correct or this is the first message, write: none>",
-    "",
-    "Example of your EXACT response format:",
-    "AR: صباح الخير! كيف حالك اليوم؟",
-    "EN: Good morning! How are you today?",
-    "FEEDBACK: none",
-    "",
-    "Never use markdown, bold text, or extra labels. Always output all three lines (AR, EN, FEEDBACK) on every reply.",
-  ].join("\n");
+async function chatCompletion(messages, maxTokens = 400, temperature = 0.8) {
+  const url = state.settings.baseUrl.replace(/\/+$/, "") + "/chat/completions";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      model: state.settings.model,
+      messages,
+      max_tokens: maxTokens,
+      temperature,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return (data.choices?.[0]?.message?.content ?? "").trim();
+}
+
+async function translateArabic(text) {
+  return chatCompletion(
+    [
+      { role: "system", content: "Translate the user's Arabic text into natural English. Reply with ONLY the English translation. No Arabic, no explanations, no quotes." },
+      { role: "user", content: text },
+    ],
+    200,
+    0.3
+  );
 }
 
 function sanitizeAI(raw) {
@@ -342,15 +597,41 @@ function sanitizeAI(raw) {
 
 function parseAI(raw) {
   raw = sanitizeAI(raw);
-  const out = { ar: "", en: "", feedback: "none" };
-  const arM = raw.match(/AR\s*[:：]\s*([\s\S]*?)(?=\n\s*EN\s*[:：]|\n\s*FEEDBACK\s*[:：]|$)/i);
-  const enM = raw.match(/EN\s*[:：]\s*([\s\S]*?)(?=\n\s*FEEDBACK\s*[:：]|$)/i);
+  const out = { ar: "", en: "", tr: "", feedback: "none" };
+  const arM = raw.match(/AR\s*[:：]\s*([\s\S]*?)(?=\n\s*EN\s*[:：]|\n\s*TR\s*[:：]|\n\s*FEEDBACK\s*[:：]|$)/i);
+  const enM = raw.match(/EN\s*[:：]\s*([\s\S]*?)(?=\n\s*TR\s*[:：]|\n\s*FEEDBACK\s*[:：]|$)/i);
+  const trM = raw.match(/TR\s*[:：]\s*([\s\S]*?)(?=\n\s*EN\s*[:：]|\n\s*FEEDBACK\s*[:：]|$)/i);
   const fbM = raw.match(/FEEDBACK\s*[:：]\s*([\s\S]*)$/i);
   if (arM) out.ar = arM[1].trim();
   if (enM) out.en = enM[1].trim();
+  if (trM) out.tr = trM[1].trim();
   if (fbM) out.feedback = fbM[1].trim();
-  if (!out.ar) out.ar = raw.trim(); // fallback if model ignored format
+  if (!out.ar) out.ar = raw.trim();
   return out;
+}
+
+function systemPrompt() {
+  const sc = SCENARIOS[state.scenario];
+  return [
+    "You are Ustadh Hiwar (حوار), a warm, patient Arabic conversation tutor for foreign learners.",
+    DIALECT_GUIDE[state.dialect],
+    LEVEL_GUIDE[state.level],
+    `Current role-play scenario: ${sc.label}. ${sc.brief}`,
+    "Keep replies short (1-3 sentences), natural, and always end with a question to keep the conversation flowing.",
+    "ALWAYS respond in EXACTLY this plain-text format, nothing else:",
+    "AR: <your Arabic reply>",
+    "TR: <Latin transliteration of your reply, e.g. 'Sabah al-khayr! Kayf haluk?'>",
+    "EN: <English translation of your reply>",
+    "FEEDBACK: <if the user's last message had a grammar, vocabulary, or spelling mistake, briefly explain it in simple English and show the corrected Arabic; if it was correct or this is the first message, write: none>",
+    "",
+    "Example of your EXACT response format:",
+    "AR: صباح الخير! كيف حالك اليوم؟",
+    "TR: Sabah al-khayr! Kayf haluk al-yawm?",
+    "EN: Good morning! How are you today?",
+    "FEEDBACK: none",
+    "",
+    "Never use markdown, bold text, or extra labels. Always output all four lines (AR, TR, EN, FEEDBACK) on every reply.",
+  ].join("\n");
 }
 
 function historyForAPI() {
@@ -361,61 +642,8 @@ function historyForAPI() {
   return msgs;
 }
 
-function buildHeaders() {
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: "Bearer " + state.settings.apiKey,
-  };
-  if (/openrouter/i.test(state.settings.baseUrl)) {
-    headers["HTTP-Referer"] = location.origin || "https://hiwar.app";
-    headers["X-Title"] = "Hiwar Arabic Tutor";
-  }
-  return headers;
-}
-
-function renderAll() {
-  const msgs = [...state.messages];
-  $("chat").innerHTML = "";
-  state.messages = [];
-  for (const m of msgs) addMessage(m, { skipPush: true });
-}
-
-async function translateArabic(text) {
-  const url = state.settings.baseUrl.replace(/\/+$/, "") + "/chat/completions";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: buildHeaders(),
-    body: JSON.stringify({
-      model: state.settings.model,
-      messages: [
-        { role: "system", content: "Translate the user's Arabic text into natural English. Reply with ONLY the English translation. No Arabic, no explanations, no quotes." },
-        { role: "user", content: text },
-      ],
-      max_tokens: 200,
-      temperature: 0.3,
-    }),
-  });
-  if (!res.ok) throw new Error("API " + res.status);
-  const data = await res.json();
-  return (data.choices?.[0]?.message?.content ?? "").trim();
-}
-
 async function callAI() {
-  const { baseUrl, apiKey, model } = state.settings;
-  const url = baseUrl.replace(/\/+$/, "") + "/chat/completions";
-  const headers = buildHeaders();
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ model, messages: historyForAPI(), max_tokens: 400, temperature: 0.8 }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${body.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content ?? "";
-  return parseAI(raw);
+  return parseAI(await chatCompletion(historyForAPI(), 400, 0.8));
 }
 
 async function sendMessage(textOverride) {
@@ -429,7 +657,8 @@ async function sendMessage(textOverride) {
   }
 
   $("input").value = "";
-  addMessage({ role: "user", ar: text, en: "", feedback: "none" });
+  addMessage({ role: "user", ar: text, en: "", tr: "", feedback: "none" });
+  state.session.messages += 1;
   state.busy = true;
   $("btn-send").disabled = true;
   addTyping();
@@ -437,13 +666,12 @@ async function sendMessage(textOverride) {
   try {
     const reply = await callAI();
     removeTyping();
-    addMessage({ role: "assistant", ar: reply.ar, en: reply.en, feedback: reply.feedback });
+    addMessage({ role: "assistant", ar: reply.ar, en: reply.en, tr: reply.tr, feedback: reply.feedback });
     touchStreak();
     if (reply.feedback && reply.feedback.toLowerCase() !== "none") {
       recordMistake(text, reply.feedback);
     }
     if (!reply.en && reply.ar) {
-      // AI skipped the EN line: fetch translation separately and re-render
       try {
         const en = await translateArabic(reply.ar);
         const last = state.messages[state.messages.length - 1];
@@ -460,12 +688,198 @@ async function sendMessage(textOverride) {
       role: "assistant",
       ar: "عذراً، حدث خطأ في الاتصال.",
       en: "Sorry, there was a connection error: " + err.message,
+      tr: "",
       feedback: "none",
     }, { noSpeakTag: true });
   } finally {
     state.busy = false;
     $("btn-send").disabled = false;
     $("input").focus();
+  }
+}
+
+/* ---------------- Listen & Repeat mode ---------------- */
+let repeatPhrase = null; // {ar, en, tr}
+
+async function fetchRepeatPhrase() {
+  if (!state.settings.apiKey) { openModal("modal-settings"); return; }
+  const sc = SCENARIOS[state.scenario];
+  $("repeat-phrase").textContent = "…";
+  $("repeat-en").textContent = "";
+  $("repeat-tr").textContent = "";
+  $("repeat-result").classList.add("hidden");
+  try {
+    const raw = await chatCompletion(
+      [
+        { role: "system", content: [
+            "You create listen-and-repeat practice phrases for an Arabic learner.",
+            DIALECT_GUIDE[state.dialect],
+            LEVEL_GUIDE[state.level],
+            `Scenario: ${sc.label}.`,
+            "Give ONE short useful sentence (5-10 words)." +
+              (state.level === "beginner" ? " Include full tashkeel (vocalization)." : "") +
+              " Vary the topic each time.",
+            "Respond ONLY in this format:",
+            "AR: <Arabic sentence>",
+            "TR: <Latin transliteration>",
+            "EN: <English translation>",
+          ].join("\n") },
+        { role: "user", content: previousPhrase ? "Give a NEW sentence, different from: " + previousPhrase.ar : "Give a sentence." },
+      ],
+      200,
+      1.0
+    );
+    const parsed = parseAI(raw);
+    repeatPhrase = parsed;
+    $("repeat-phrase").textContent = parsed.ar;
+    $("repeat-en").textContent = state.translations && parsed.en ? parsed.en : "";
+    const trEl = $("repeat-tr");
+    trEl.textContent = parsed.tr || translitFallback(parsed.ar);
+    trEl.classList.toggle("hidden", !state.translit);
+    if (state.settings.tts) setTimeout(() => speakArabic(parsed.ar), 300);
+  } catch (err) {
+    $("repeat-phrase").textContent = "⚠️ " + err.message;
+  }
+}
+
+/* Arabic text normalization for comparison */
+function normalizeArabic(text) {
+  return String(text || "")
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "") // diacritics + tatweel
+    .replace(/[.,!?؟،؛:؛…«»"'()\-]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function wordSimilarity(target, said) {
+  const t = normalizeArabic(target).split(" ").filter(Boolean);
+  const s = normalizeArabic(said).split(" ").filter(Boolean);
+  if (!t.length || !s.length) return { score: 0, missed: t };
+  // LCS length
+  const dp = Array.from({ length: t.length + 1 }, () => new Array(s.length + 1).fill(0));
+  for (let i = 1; i <= t.length; i++) {
+    for (let j = 1; j <= s.length; j++) {
+      dp[i][j] = t[i - 1] === s[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  const lcs = dp[t.length][s.length];
+  const score = Math.round((2 * lcs * 100) / (t.length + s.length));
+  const missed = [];
+  let i = t.length, j = s.length;
+  while (i > 0 && j > 0) {
+    if (t[i - 1] === s[j - 1]) { i--; j--; }
+    else if (dp[i - 1][j] >= dp[i][j - 1]) { missed.unshift(t[i - 1]); i--; }
+    else j--;
+  }
+  while (i > 0) { missed.unshift(t[i - 1]); i--; }
+  return { score, missed: missed.filter((w) => w) };
+}
+
+function handleRepeatAttempt(saidText) {
+  if (!repeatPhrase) return;
+  $("repeat-said").textContent = "You said: " + saidText;
+  const { score, missed } = wordSimilarity(repeatPhrase.ar, saidText);
+  $("score-fill").style.width = Math.max(4, score) + "%";
+  $("score-fill").style.background = score >= 80 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
+  $("repeat-verdict").textContent =
+    score >= 85 ? "🌟 Excellent pronunciation!" :
+    score >= 60 ? "💪 Close! Listen again and repeat." :
+    "🌱 Keep trying — tap 🔊 to hear it slowly.";
+  $("repeat-missed").textContent = missed.length ? "Words to work on: " + missed.join(" ") : "";
+  $("repeat-result").classList.remove("hidden");
+  touchStreak();
+}
+
+let previousPhrase = null;
+function enterRepeatMode() {
+  $("chat").classList.add("hidden");
+  $("composer").classList.add("hidden");
+  $("repeat-panel").classList.remove("hidden");
+  if (!repeatPhrase) fetchRepeatPhrase();
+}
+function exitRepeatMode() {
+  $("chat").classList.remove("hidden");
+  $("composer").classList.remove("hidden");
+  $("repeat-panel").classList.add("hidden");
+}
+
+/* ---------------- Word popup (tap-to-learn) ---------------- */
+let currentWord = null;
+
+function cleanWord(token) {
+  return token.replace(/[.,!?؟،؛:…"«»()\-]/g, "").trim();
+}
+
+async function openWordPopup(token, sentence) {
+  const word = cleanWord(token);
+  if (!word) return;
+  currentWord = { word, sentence };
+  $("word-title").textContent = word;
+  $("word-context").textContent = sentence ? '"' + sentence + '"' : "";
+  $("word-meaning").textContent = "Looking up…";
+  $("btn-word-save").disabled = true;
+  $("btn-word-save").textContent = "💾 Save to vocabulary";
+  openModal("modal-word");
+
+  if (!state.settings.apiKey) {
+    $("word-meaning").textContent = "Add your API key in Settings to look up words.";
+    return;
+  }
+  try {
+    const meaning = await chatCompletion(
+      [
+        { role: "system", content: "You are a concise Arabic-English dictionary. The user gives an Arabic word and the sentence it appeared in. Reply with ONLY its meaning in this format: '<part of speech>: <short English meaning>'. Maximum 2 lines. No Arabic in the reply except the word itself if needed." },
+        { role: "user", content: `Word: ${word}\nSentence: ${sentence || "(none)"}` },
+      ],
+      120,
+      0.3
+    );
+    currentWord.meaning = meaning;
+    $("word-meaning").textContent = meaning;
+    $("btn-word-save").disabled = false;
+  } catch (err) {
+    $("word-meaning").textContent = "Lookup failed: " + err.message;
+  }
+}
+
+/* ---------------- Session summary ---------------- */
+async function openSummary() {
+  const s = state.session;
+  const st = getStreak();
+  const stats = $("summary-stats");
+  stats.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-tile"><span class="stat-num">${s.messages}</span><span class="stat-label">messages</span></div>
+      <div class="stat-tile"><span class="stat-num">${getVocab().length}</span><span class="stat-label">saved words</span></div>
+      <div class="stat-tile"><span class="stat-num">${getMistakes().length}</span><span class="stat-label">mistakes</span></div>
+      <div class="stat-tile"><span class="stat-num">🔥 ${st.days}</span><span class="stat-label">day streak</span></div>
+    </div>`;
+  $("summary-recap").textContent = "Generating recap…";
+  openModal("modal-summary");
+
+  const recent = state.messages.slice(-20).map((m) => (m.role === "user" ? "Learner: " : "Tutor: ") + m.ar + (m.en ? " (" + m.en + ")" : ""));
+  if (!state.settings.apiKey || recent.length === 0) {
+    $("summary-recap").textContent = recent.length
+      ? "Add your API key to get an AI recap."
+      : "Start a conversation first — then come back for a recap of new words and things to practice.";
+    return;
+  }
+  try {
+    const recap = await chatCompletion(
+      [
+        { role: "system", content: "You are an Arabic tutor reviewing a learner's practice conversation. Write a short session recap in English with three sections: 1) 'New words' — up to 8 useful Arabic words/phrases from the conversation, each as 'Arabic — English'. 2) 'To review' — up to 3 mistakes or weak points the learner made. 3) 'Next' — one concrete suggestion for the next practice session. Be encouraging and concise. Use plain text with short lines, no markdown." },
+        { role: "user", content: recent.join("\n") },
+      ],
+      400,
+      0.5
+    );
+    $("summary-recap").textContent = recap;
+    touchStreak();
+  } catch (err) {
+    $("summary-recap").textContent = "Recap failed: " + err.message;
   }
 }
 
@@ -492,12 +906,10 @@ function saveSettingsFromModal() {
 /* ---------------- Conversation control ---------------- */
 function newConversation() {
   state.messages = [];
+  state.session = { messages: 0, mistakes: 0, vocab: 0, startedAt: Date.now() };
   $("chat").innerHTML = "";
   const sc = SCENARIOS[state.scenario];
-  addMessage({ role: "assistant", ar: sc.opener, en: sc.en, feedback: "none" }, { noSpeakTag: true });
-  if (state.settings.tts && state.settings.apiKey) {
-    // don't auto-speak opener before first interaction (browsers block it)
-  }
+  addMessage({ role: "assistant", ar: sc.opener, en: sc.en, tr: "", feedback: "none" }, { noSpeakTag: true });
 }
 
 /* ---------------- Init ---------------- */
@@ -514,18 +926,47 @@ function init() {
     newConversation();
   }
 
+  // PWA
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  // Chat composer
   $("btn-send").addEventListener("click", () => sendMessage());
-  $("input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendMessage();
+  $("input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+  $("input").addEventListener("input", (e) => {
+    e.target.style.direction = /[\u0600-\u06FF]/.test(e.target.value) ? "rtl" : "ltr";
   });
   $("btn-mic").addEventListener("click", toggleMic);
+
+  // Topbar
   $("btn-settings").addEventListener("click", openSettings);
   $("btn-open-settings").addEventListener("click", openSettings);
   $("btn-save-settings").addEventListener("click", saveSettingsFromModal);
-  $("btn-mistakes").addEventListener("click", () => {
-    renderMistakes();
-    openModal("modal-mistakes");
+  $("btn-summary").addEventListener("click", openSummary);
+  $("btn-study").addEventListener("click", () => {
+    showStudyLists();
+    renderStudyLists();
+    openModal("modal-study");
   });
+
+  // Study: quizzes + word save
+  $("btn-quiz-vocab").addEventListener("click", startVocabQuiz);
+  $("btn-quiz-mistakes").addEventListener("click", startMistakesQuiz);
+  $("btn-quiz-back").addEventListener("click", showStudyLists);
+  $("quiz-next").addEventListener("click", () => {
+    quiz.idx += 1;
+    if (quiz.type === "vocab") renderVocabQuestion();
+    else renderMistakesCard();
+  });
+  $("btn-word-save").addEventListener("click", () => {
+    if (!currentWord?.meaning) return;
+    const saved = saveVocabWord(currentWord.word, currentWord.meaning, currentWord.sentence);
+    $("btn-word-save").textContent = saved ? "Saved ✓" : "Already saved ✓";
+    $("btn-word-save").disabled = true;
+  });
+
+  // Modals close
   document.querySelectorAll(".modal-close").forEach((b) =>
     b.addEventListener("click", () => closeModal(b.dataset.close))
   );
@@ -533,15 +974,31 @@ function init() {
     m.addEventListener("click", (e) => { if (e.target === m) m.classList.add("hidden"); })
   );
 
+  // Controls
   $("scenario-select").addEventListener("change", (e) => {
     state.scenario = e.target.value;
     newConversation();
   });
-  document.querySelectorAll(".seg-btn").forEach((b) =>
+  document.querySelectorAll("#difficulty .seg-btn").forEach((b) =>
     b.addEventListener("click", () => {
-      document.querySelectorAll(".seg-btn").forEach((x) => x.classList.remove("active"));
+      document.querySelectorAll("#difficulty .seg-btn").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
       state.level = b.dataset.level;
+    })
+  );
+  $("dialect-select").addEventListener("change", (e) => {
+    state.dialect = e.target.value;
+    pickArabicVoice();
+    if (state.mode === "repeat") { repeatPhrase = null; fetchRepeatPhrase(); }
+    else newConversation();
+  });
+  document.querySelectorAll(".mode-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".mode-btn").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+      state.mode = b.dataset.mode;
+      if (state.mode === "repeat") enterRepeatMode();
+      else exitRepeatMode();
     })
   );
   $("btn-translation").addEventListener("click", () => {
@@ -550,13 +1007,24 @@ function init() {
     btn.classList.toggle("on", state.translations);
     btn.querySelector(".toggle-text").textContent = state.translations ? "On" : "Off";
     renderAll();
+    $("repeat-en").textContent = state.translations && repeatPhrase?.en ? repeatPhrase.en : "";
+  });
+  $("btn-translit").addEventListener("click", () => {
+    state.translit = !state.translit;
+    const btn = $("btn-translit");
+    btn.classList.toggle("on", state.translit);
+    btn.querySelector(".toggle-text").textContent = state.translit ? "On" : "Off";
+    renderAll();
+    $("repeat-tr").classList.toggle("hidden", !state.translit);
   });
   $("btn-newchat").addEventListener("click", newConversation);
 
-  // Adjust input direction for Arabic typing
-  $("input").addEventListener("input", (e) => {
-    const v = e.target.value;
-    e.target.style.direction = /[\u0600-\u06FF]/.test(v) ? "rtl" : "ltr";
+  // Repeat mode
+  $("btn-repeat-play").addEventListener("click", () => repeatPhrase && speakArabic(repeatPhrase.ar));
+  $("btn-repeat-mic").addEventListener("click", startListening);
+  $("btn-repeat-next").addEventListener("click", () => {
+    previousPhrase = repeatPhrase;
+    fetchRepeatPhrase();
   });
 }
 

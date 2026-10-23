@@ -4,13 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hiwar — Arabic Conversation Tutor</title>
-  <meta name="description" content="Hiwar (حوار): practice Arabic conversation with an AI tutor. Voice in, voice out, gentle corrections, real scenarios." />
+  <meta name="description" content="Hiwar (حوار): practice Arabic conversation with an AI tutor. Voice in, voice out, gentle corrections, real scenarios, listen & repeat, vocab and quizzes." />
+  <meta name="theme-color" content="#2dd4bf" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>" />
 </head>
 <body class="min-h-screen">
   <div id="app" class="min-h-screen flex flex-col">
@@ -26,7 +29,8 @@
         </div>
         <div class="flex items-center gap-2">
           <div id="streak-chip" class="streak-chip" title="Practice streak">🔥 <span id="streak-count">0</span></div>
-          <button id="btn-mistakes" class="icon-btn" title="My common mistakes">📋</button>
+          <button id="btn-summary" class="icon-btn" title="Session summary">🧾</button>
+          <button id="btn-study" class="icon-btn" title="Study: mistakes, vocabulary & quizzes">📚</button>
           <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
         </div>
       </div>
@@ -56,9 +60,30 @@
           </div>
         </div>
         <div class="control-group">
+          <label class="control-label">Arabic</label>
+          <select id="dialect-select" class="select" title="Dialect of the tutor">
+            <option value="msa">Modern Standard</option>
+            <option value="egyptian">Egyptian 🇪🇬</option>
+            <option value="levantine">Levantine 🇱🇧</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label">Mode</label>
+          <div id="mode-seg" class="seg">
+            <button class="seg-btn mode-btn active" data-mode="chat">💬 Chat</button>
+            <button class="seg-btn mode-btn" data-mode="repeat">🎧 Repeat</button>
+          </div>
+        </div>
+        <div class="control-group">
           <label class="control-label">English</label>
           <button id="btn-translation" class="toggle-btn on" title="Show/hide English translations">
             <span class="knob"></span><span class="toggle-text">On</span>
+          </button>
+        </div>
+        <div class="control-group">
+          <label class="control-label">Translit.</label>
+          <button id="btn-translit" class="toggle-btn" title="Show/hide Latin transliteration">
+            <span class="knob"></span><span class="toggle-text">Off</span>
           </button>
         </div>
         <button id="btn-newchat" class="btn-ghost">New chat</button>
@@ -68,8 +93,29 @@
     <!-- Chat -->
     <main id="chat" class="chat flex-1"></main>
 
+    <!-- Listen & Repeat panel -->
+    <section id="repeat-panel" class="repeat-wrap flex-1 hidden">
+      <div class="repeat-card">
+        <p class="repeat-hint">Listen to the phrase, then repeat it out loud</p>
+        <div id="repeat-phrase" class="repeat-phrase arabic">…</div>
+        <div id="repeat-en" class="repeat-sub"></div>
+        <div id="repeat-tr" class="repeat-sub tr hidden"></div>
+        <div class="repeat-actions">
+          <button id="btn-repeat-play" class="repeat-btn">🔊 Listen</button>
+          <button id="btn-repeat-mic" class="repeat-btn primary">🎤 Repeat it</button>
+          <button id="btn-repeat-next" class="repeat-btn">➡️ New phrase</button>
+        </div>
+        <div id="repeat-result" class="repeat-result hidden">
+          <div class="score-bar"><div id="score-fill" class="score-fill"></div></div>
+          <p id="repeat-verdict" class="repeat-verdict"></p>
+          <p id="repeat-said" class="repeat-said"></p>
+          <p id="repeat-missed" class="repeat-missed"></p>
+        </div>
+      </div>
+    </section>
+
     <!-- Composer -->
-    <footer class="composer">
+    <footer id="composer" class="composer">
       <div class="composer-inner">
         <button id="btn-mic" class="mic-btn" title="Speak in Arabic">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
@@ -82,7 +128,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
-      <p class="hint">💡 Speak or type in Arabic. Click any assistant bubble to hear it. <button id="btn-open-settings" class="link">Connect your AI key</button> to start.</p>
+      <p class="hint">💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it. <button id="btn-open-settings" class="link">Connect your AI key</button> to start.</p>
     </footer>
   </div>
 
@@ -109,15 +155,66 @@
     </div>
   </div>
 
-  <!-- Mistakes modal -->
-  <div id="modal-mistakes" class="modal hidden">
+  <!-- Study modal: mistakes, vocabulary, quizzes -->
+  <div id="modal-study" class="modal hidden">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>My Common Mistakes</h2>
-        <button class="modal-close" data-close="modal-mistakes">×</button>
+        <h2>Study</h2>
+        <button class="modal-close" data-close="modal-study">×</button>
       </div>
       <div class="modal-body">
-        <div id="mistakes-list" class="mistakes-list"></div>
+        <div class="study-actions">
+          <button id="btn-quiz-vocab" class="study-btn">🎯 Vocabulary quiz</button>
+          <button id="btn-quiz-mistakes" class="study-btn">🔁 Mistakes flashcards</button>
+          <button id="btn-quiz-back" class="study-btn hidden">← Back</button>
+        </div>
+
+        <div id="quiz-area" class="quiz-area hidden">
+          <p id="quiz-progress" class="quiz-progress"></p>
+          <div id="quiz-word" class="quiz-word arabic"></div>
+          <div id="quiz-options" class="quiz-options"></div>
+          <p id="quiz-feedback" class="quiz-feedback"></p>
+          <button id="quiz-next" class="btn-primary hidden">Next</button>
+          <div id="quiz-done" class="quiz-done hidden"></div>
+        </div>
+
+        <div id="study-lists">
+          <h3 class="study-title">🔁 Common mistakes <span id="mistakes-n" class="count-chip"></span></h3>
+          <div id="mistakes-list" class="mistakes-list"></div>
+          <h3 class="study-title">🗂️ My vocabulary <span id="vocab-n" class="count-chip"></span></h3>
+          <div id="vocab-list" class="mistakes-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Word popup modal -->
+  <div id="modal-word" class="modal hidden">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-head">
+        <h2 class="arabic" id="word-title"></h2>
+        <button class="modal-close" data-close="modal-word">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="word-meaning" class="word-meaning">Looking up…</p>
+        <p id="word-context" class="word-context"></p>
+        <div class="modal-actions">
+          <button id="btn-word-save" class="btn-primary" disabled>💾 Save to vocabulary</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session summary modal -->
+  <div id="modal-summary" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Session summary</h2>
+        <button class="modal-close" data-close="modal-summary">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="summary-stats" class="summary-stats"></div>
+        <div id="summary-recap" class="summary-recap">Generating recap…</div>
       </div>
     </div>
   </div>
