@@ -195,6 +195,31 @@ function addMessage(msg, opts = {}) {
     bubble.appendChild(fb);
   }
 
+  if (msg.role === "assistant" && !msg.en) {
+    const tbtn = document.createElement("button");
+    tbtn.type = "button";
+    tbtn.className = "translate-btn";
+    tbtn.textContent = "🌐 Translate";
+    tbtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      tbtn.disabled = true;
+      tbtn.textContent = "Translating…";
+      try {
+        const en = await translateArabic(msg.ar);
+        msg.en = en;
+        const enDiv = document.createElement("div");
+        enDiv.className = "en";
+        enDiv.textContent = en;
+        tbtn.replaceWith(enDiv);
+        saveLS(LS.history, { scenario: state.scenario, messages: state.messages.slice(-40) });
+      } catch {
+        tbtn.disabled = false;
+        tbtn.textContent = "🌐 Retry translate";
+      }
+    });
+    bubble.appendChild(tbtn);
+  }
+
   if (msg.role === "assistant" && !opts.noSpeakTag) {
     const tag = document.createElement("div");
     tag.className = "speak-tag";
@@ -298,12 +323,27 @@ function systemPrompt() {
     "AR: <your Arabic reply>",
     "EN: <English translation of your reply>",
     "FEEDBACK: <if the user's last message had a grammar, vocabulary, or spelling mistake, briefly explain it in simple English and show the corrected Arabic; if it was correct or this is the first message, write: none>",
+    "",
+    "Example of your EXACT response format:",
+    "AR: صباح الخير! كيف حالك اليوم؟",
+    "EN: Good morning! How are you today?",
+    "FEEDBACK: none",
+    "",
+    "Never use markdown, bold text, or extra labels. Always output all three lines (AR, EN, FEEDBACK) on every reply.",
   ].join("\n");
 }
 
+function sanitizeAI(raw) {
+  return String(raw ?? "")
+    .replace(/```[a-zA-Z]*\n?/g, "")
+    .replace(/[*#>`_~]/g, "")
+    .trim();
+}
+
 function parseAI(raw) {
+  raw = sanitizeAI(raw);
   const out = { ar: "", en: "", feedback: "none" };
-  const arM = raw.match(/AR\s*[:：]\s*([\s\S]*?)(?=\n\s*EN\s*[:：]|$)/i);
+  const arM = raw.match(/AR\s*[:：]\s*([\s\S]*?)(?=\n\s*EN\s*[:：]|\n\s*FEEDBACK\s*[:：]|$)/i);
   const enM = raw.match(/EN\s*[:：]\s*([\s\S]*?)(?=\n\s*FEEDBACK\s*[:：]|$)/i);
   const fbM = raw.match(/FEEDBACK\s*[:：]\s*([\s\S]*)$/i);
   if (arM) out.ar = arM[1].trim();
@@ -321,17 +361,49 @@ function historyForAPI() {
   return msgs;
 }
 
-async function callAI() {
-  const { baseUrl, apiKey, model } = state.settings;
-  const url = baseUrl.replace(/\/+$/, "") + "/chat/completions";
+function buildHeaders() {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: "Bearer " + apiKey,
+    Authorization: "Bearer " + state.settings.apiKey,
   };
-  if (/openrouter/i.test(baseUrl)) {
+  if (/openrouter/i.test(state.settings.baseUrl)) {
     headers["HTTP-Referer"] = location.origin || "https://hiwar.app";
     headers["X-Title"] = "Hiwar Arabic Tutor";
   }
+  return headers;
+}
+
+function renderAll() {
+  const msgs = [...state.messages];
+  $("chat").innerHTML = "";
+  state.messages = [];
+  for (const m of msgs) addMessage(m, { skipPush: true });
+}
+
+async function translateArabic(text) {
+  const url = state.settings.baseUrl.replace(/\/+$/, "") + "/chat/completions";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: buildHeaders(),
+    body: JSON.stringify({
+      model: state.settings.model,
+      messages: [
+        { role: "system", content: "Translate the user's Arabic text into natural English. Reply with ONLY the English translation. No Arabic, no explanations, no quotes." },
+        { role: "user", content: text },
+      ],
+      max_tokens: 200,
+      temperature: 0.3,
+    }),
+  });
+  if (!res.ok) throw new Error("API " + res.status);
+  const data = await res.json();
+  return (data.choices?.[0]?.message?.content ?? "").trim();
+}
+
+async function callAI() {
+  const { baseUrl, apiKey, model } = state.settings;
+  const url = baseUrl.replace(/\/+$/, "") + "/chat/completions";
+  const headers = buildHeaders();
   const res = await fetch(url, {
     method: "POST",
     headers,
@@ -369,6 +441,17 @@ async function sendMessage(textOverride) {
     touchStreak();
     if (reply.feedback && reply.feedback.toLowerCase() !== "none") {
       recordMistake(text, reply.feedback);
+    }
+    if (!reply.en && reply.ar) {
+      // AI skipped the EN line: fetch translation separately and re-render
+      try {
+        const en = await translateArabic(reply.ar);
+        const last = state.messages[state.messages.length - 1];
+        if (last && last.role === "assistant" && !last.en) {
+          last.en = en;
+          renderAll();
+        }
+      } catch { /* keep the manual Translate button */ }
     }
     if (state.settings.tts) speakArabic(reply.ar);
   } catch (err) {
@@ -466,11 +549,7 @@ function init() {
     const btn = $("btn-translation");
     btn.classList.toggle("on", state.translations);
     btn.querySelector(".toggle-text").textContent = state.translations ? "On" : "Off";
-    // re-render to apply
-    const msgs = [...state.messages];
-    $("chat").innerHTML = "";
-    state.messages = [];
-    for (const m of msgs) addMessage(m, { skipPush: true });
+    renderAll();
   });
   $("btn-newchat").addEventListener("click", newConversation);
 

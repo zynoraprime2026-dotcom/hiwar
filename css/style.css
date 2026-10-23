@@ -244,3 +244,16 @@ body {
   .btn-ghost { margin-left: 0; }
   .msg { max-width: 94%; }
 }
+
+.translate-btn {
+  margin-top: 6px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 12px;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.translate-btn:hover { border-color: var(--accent); }
+.translate-btn:disabled { opacity: .6; cursor: wait; }
