@@ -24,6 +24,7 @@ Ummah — free to use, free to copy, free to improve.
 
 | | |
 |---|---|
+| 🧭 **Guided practice** | Seven scripted conversations that need no key, no account and no connection |
 | 💬 **Real conversation** | Modern Standard Arabic, or Egyptian and Levantine dialect |
 | 🎤 **Voice in, voice out** | Speak your reply with the mic; tap any bubble to hear it read aloud |
 | ✏️ **Gentle corrections** | Mistakes explained in simple English with the corrected Arabic |
@@ -42,9 +43,12 @@ Ummah — free to use, free to copy, free to improve.
 ## Get started
 
 1. Open the app — in a browser, on a home screen, or in the Windows app.
-2. Open **Settings ⚙️** and paste an API key from any OpenAI-compatible provider.
+2. Choose **Start free practice** and work through a guided scene. Nothing to install, no key,
+   no account; it runs offline.
+3. When you want free conversation with corrections and voice, open **Settings ⚙️** and paste
+   an API key from any OpenAI-compatible provider.
    [OpenRouter](https://openrouter.ai/keys) has a free tier; `openai/gpt-4o-mini` works well.
-3. Pick a scenario and level, then speak or type in Arabic.
+4. Pick a scenario and level, then speak or type in Arabic.
 
 Your key is stored only on your own device, is never sent anywhere except the AI
 provider you chose, and is deliberately **left out of exported backups**.
