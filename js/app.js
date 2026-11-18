@@ -229,14 +229,32 @@ function shuffle(arr) {
   return a;
 }
 
+/* Saved words first; the built-in dictionary fills in so a first-time
+   visitor can still practise instead of hitting an empty quiz. */
+function quizPool() {
+  const vocab = getVocab().map((v) => ({ word: v.word, meaning: v.meaning, saved: true }));
+  const saved = new Set(vocab.map((v) => v.word));
+  const extra = (typeof DICTIONARY !== "undefined" ? DICTIONARY : [])
+    .map((d) => ({
+      word: d.ar,
+      meaning: (DICT_POS[d.pos] || d.pos) + ": " + d.en,
+      saved: false,
+    }))
+    .filter((d) => !saved.has(d.word));
+  return { vocab, extra };
+}
+
 function startVocabQuiz() {
-  const vocab = getVocab();
-  if (vocab.length < 4) {
-    alert("Save at least 4 words to your vocabulary first (tap words in the tutor's replies).");
+  const { vocab, extra } = quizPool();
+  quiz.type = "vocab";
+  quiz.fromDictionary = vocab.length < 4;
+  quiz.items = quiz.fromDictionary
+    ? shuffle([...vocab, ...extra]).slice(0, 8)
+    : shuffle(vocab).slice(0, 10);
+  if (!quiz.items.length) {
+    alert("The dictionary could not be loaded. Reload the page and try again.");
     return;
   }
-  quiz.type = "vocab";
-  quiz.items = shuffle(vocab).slice(0, 10);
   quiz.idx = 0;
   quiz.score = 0;
   showQuizArea();
@@ -245,14 +263,17 @@ function startVocabQuiz() {
 
 function renderVocabQuestion() {
   const item = quiz.items[quiz.idx];
-  $("quiz-progress").textContent = `Question ${quiz.idx + 1} / ${quiz.items.length}`;
+  $("quiz-progress").textContent =
+    `Question ${quiz.idx + 1} / ${quiz.items.length}` +
+    (quiz.fromDictionary ? " · practising from the built-in dictionary" : "");
   $("quiz-word").textContent = item.word;
   $("quiz-feedback").textContent = "";
   $("quiz-feedback").className = "quiz-feedback";
   $("quiz-next").classList.add("hidden");
   $("quiz-done").classList.add("hidden");
 
-  const distractors = shuffle(getVocab().filter((v) => v.word !== item.word)).slice(0, 3);
+  const pool = quizPool();
+  const distractors = shuffle([...pool.vocab, ...pool.extra].filter((v) => v.word !== item.word)).slice(0, 3);
   const options = shuffle([item, ...distractors]);
   const wrap = $("quiz-options");
   wrap.innerHTML = "";

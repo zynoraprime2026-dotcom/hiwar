@@ -57,6 +57,20 @@ Ummah — free to use, free to copy, free to improve.
 | **GitHub Pages (mirror)** | https://zynoraprime2026-dotcom.github.io/hiwar/ |
 | **Windows 10/11** | Installer and portable `.exe` on the [releases page](https://github.com/zynoraprime2026-dotcom/hiwar/releases/latest) |
 
+### Turning on the shared tutor
+
+The AI tutor can run without asking anyone for a key: `api/tutor.js` keeps one key on the server and
+proxies the conversation. To switch it on, add an environment variable in Vercel (Project → Settings →
+Environment Variables, Production):
+
+| Variable | Value |
+|---|---|
+| `OPENROUTER_API_KEY` | a free key from [openrouter.ai/keys](https://openrouter.ai/keys) |
+
+Optional: `TUTOR_MODEL` (default `meta-llama/llama-3.3-70b-instruct:free`), `TUTOR_DAILY_PER_IP`
+(default 40), `TUTOR_DAILY_TOTAL` (default 1500). Without the variable the endpoint reports
+`configured: false` and Hiwar stays on guided practice, which needs nothing.
+
 `vercel.json` pins the deployment to plain static files: no install step and no build step, so
 Vercel serves `index.html` and the assets as they are.
 

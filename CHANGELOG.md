@@ -4,6 +4,31 @@ All notable changes to Hiwar are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.3.0] — 2026-11-18
+
+A tutor that does not ask for a key, and no more dead ends on a phone.
+
+### Added
+- **Shared tutor endpoint** (`api/tutor.js`): one key lives on the server, so a visitor can hold a
+  real conversation without pasting anything. The model, token ceiling and temperature are fixed
+  server-side, messages are trimmed and length-capped, and a per-IP plus global daily budget guards
+  the cost. Nothing is logged.
+- The app probes `/api/tutor` at boot: a reachable tutor opens chat mode with the AI tutor, otherwise
+  it falls back to guided practice exactly as before. Works with an OpenRouter key or the Vercel AI
+  Gateway.
+- **Vocabulary quiz now works on a first visit**, drawing on the built-in dictionary when fewer than
+  four words are saved, and saying so in the question counter.
+- **Report a mistake** in Settings opens a prefilled GitHub issue with the version and scene attached.
+
+### Changed
+- A browser with no speech engine now reads "This browser cannot listen. Tap the Arabic line to hear
+  it, then say it out loud." instead of showing no button at all.
+- Copy no longer claims the AI tutor needs a personal key, because on this deployment it usually does not.
+
+### Note
+The shared tutor stays off until one environment variable exists in Vercel: `OPENROUTER_API_KEY`.
+Until then `/api/tutor` answers `configured: false` and Hiwar behaves as it did in 2.2.x.
+
 ## [2.2.1] — 2026-11-18
 
 Deployed to Vercel.
