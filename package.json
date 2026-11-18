@@ -67,11 +67,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -83,17 +87,25 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Hiwar",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Hiwar-Setup-${version}.${ext}"
     },
     "mac": {
       "category": "public.app-category.education",
       "icon": "build/icon.png",
-      "target": ["dmg"]
+      "target": [
+        "dmg"
+      ]
     },
     "linux": {
       "category": "Education",
       "icon": "build/icon.png",
-      "target": ["AppImage"]
+      "target": [
+        "AppImage"
+      ]
+    },
+    "portable": {
+      "artifactName": "Hiwar-Portable-${version}.${ext}"
     }
   }
 }
