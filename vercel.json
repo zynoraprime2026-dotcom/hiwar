@@ -1,26 +1,53 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "exit 0",
+  "buildCommand": "exit 0",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
       ]
     },
     {
       "source": "/index.html",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "microphone=(self), camera=(), geolocation=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "microphone=(self), camera=(), geolocation=()"
+        }
       ]
     }
   ]
