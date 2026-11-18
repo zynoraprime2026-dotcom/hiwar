@@ -109,7 +109,7 @@ if (notes.length) {
 
 /* 9. Guided practice content is complete and usable offline */
 const guidedSrc = read("js/guided.js");
-const sceneBlocks = guidedSrc.split(/\n  (\w+): \{\n    title:/).slice(1);
+const sceneBlocks = guidedSrc.split(/\r?\n  (\w+): \{\r?\n    title:/).slice(1);
 if (sceneBlocks.length < 14) {
   errors.push("js/guided.js: expected at least 7 guided scenes");
 }
