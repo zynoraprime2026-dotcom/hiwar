@@ -608,15 +608,25 @@ function hasAI() {
   return Boolean(state.settings.apiKey) || state.tutorAvailable;
 }
 
-/* Ask the deployment whether a shared tutor is switched on. */
+/* The desktop app and the Pages mirror have no /api of their own, so they
+   fall back to the deployed endpoint. Same tutor, same daily budget. */
+const REMOTE_TUTOR = "https://hiwar-topaz.vercel.app/api/tutor";
+let tutorEndpoint = "/api/tutor";
+
 async function probeTutor() {
-  try {
-    const res = await fetch("/api/tutor", { method: "GET" });
-    if (!res.ok) throw new Error("no endpoint");
-    const data = await res.json();
-    state.tutorAvailable = Boolean(data.configured);
-  } catch {
-    state.tutorAvailable = false;
+  state.tutorAvailable = false;
+  for (const url of ["/api/tutor", REMOTE_TUTOR]) {
+    try {
+      const res = await fetch(url, { method: "GET" });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!data.configured) continue;
+      state.tutorAvailable = true;
+      tutorEndpoint = url;
+      break;
+    } catch {
+      /* try the next one */
+    }
   }
   renderTutorHint();
 }
@@ -633,7 +643,7 @@ function renderTutorHint() {
 
 /* Talk to the shared endpoint, which holds the key on the server. */
 async function tutorCompletion(messages, maxTokens, temperature) {
-  const res = await fetch("/api/tutor", {
+  const res = await fetch(tutorEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, max_tokens: maxTokens, temperature }),

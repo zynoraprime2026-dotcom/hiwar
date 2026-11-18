@@ -94,6 +94,16 @@ function cleanMessages(input) {
 
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  // The desktop app and the GitHub Pages mirror call this endpoint from
+  // another origin. It is public and cookie-less, so a wildcard is fine and
+  // the per-IP budget still applies.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
 
   const provider = pickProvider();
   const perIpLimit = Number(process.env.TUTOR_DAILY_PER_IP || 40);
