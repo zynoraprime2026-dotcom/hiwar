@@ -65,11 +65,17 @@ Environment Variables, Production):
 
 | Variable | Value |
 |---|---|
-| `OPENROUTER_API_KEY` | a free key from [openrouter.ai/keys](https://openrouter.ai/keys) |
+| `GEMINI_API_KEY` | a free key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `OPENROUTER_API_KEY` | or a key from [openrouter.ai/keys](https://openrouter.ai/keys) |
 
-Optional: `TUTOR_MODEL` (default `meta-llama/llama-3.3-70b-instruct:free`), `TUTOR_DAILY_PER_IP`
-(default 40), `TUTOR_DAILY_TOTAL` (default 1500). Without the variable the endpoint reports
-`configured: false` and Hiwar stays on guided practice, which needs nothing.
+Any one of them is enough. A Google key is recognised by its prefix (`AQ.` or `AIza`) even if it is
+stored under `OPENROUTER_API_KEY`, which is how this deployment is set up. If neither exists, the
+Vercel AI Gateway is used when the project has an OIDC token.
+
+Optional: `TUTOR_MODEL` (defaults to `gemini-flash-lite-latest`, or
+`meta-llama/llama-3.3-70b-instruct:free` on OpenRouter), `TUTOR_DAILY_PER_IP` (default 40) and
+`TUTOR_DAILY_TOTAL` (default 1500). Without a key the endpoint reports `configured: false` and Hiwar
+stays on guided practice, which needs nothing.
 
 `vercel.json` pins the deployment to plain static files: no install step and no build step, so
 Vercel serves `index.html` and the assets as they are.

@@ -4,6 +4,18 @@ All notable changes to Hiwar are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.3.1] — 2026-11-18
+
+The shared tutor is switched on.
+
+- `api/tutor.js` now answers through whichever provider is configured: Google Gemini (OpenAI-compatible
+  endpoint, default model `gemini-flash-lite-latest`), OpenRouter, or the Vercel AI Gateway. A Google key
+  is recognised by its prefix even when it is stored under the OpenRouter variable name.
+- One quiet retry when a free tier answers 429 or 503, and a plain-language "the tutor is busy" instead
+  of a raw status.
+- Verified live: a visitor with no key and no account typed "مرحبا، اسمي عبدالرحمن" and got
+  "أهلاً بك يا عبد الرحمن! …" in about a second.
+
 ## [2.3.0] — 2026-11-18
 
 A tutor that does not ask for a key, and no more dead ends on a phone.

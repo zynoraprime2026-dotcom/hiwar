@@ -9,7 +9,7 @@
 "use strict";
 
 /* ---------------- State ---------------- */
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.3.1";
 
 const LS = {
   settings: "hiwar_settings",
