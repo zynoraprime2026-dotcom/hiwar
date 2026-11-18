@@ -1,7 +1,7 @@
 {
   "name": "hiwar",
   "productName": "Hiwar",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Hiwar (حوار) — a patient AI tutor for Arabic conversation practice. Runs in the browser, installs as a PWA, and ships as a Windows desktop app.",
   "license": "MIT",
   "author": {

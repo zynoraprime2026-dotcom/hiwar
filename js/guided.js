@@ -1476,8 +1476,14 @@ function guidedChoose(index) {
 
 /* Say the line out loud, scored on this device. No key, no upload. */
 function guidedSayRow(wrap, entry) {
+  if (!entry.opt) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR || !entry.opt) return;
+  if (!SR) {
+    wrap.appendChild(
+      guidedEl("p", "guided-note", "This browser cannot listen. Tap the Arabic line to hear it, then say it out loud.")
+    );
+    return;
+  }
 
   const row = guidedEl("div", "guided-say");
   if (entry.score) {

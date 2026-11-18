@@ -186,7 +186,7 @@
       <p class="hint">
         💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it.
         Press <kbd>Enter</kbd> to send and <kbd>Esc</kbd> to close a panel.
-        <button id="btn-open-settings" class="link">AI key</button> is optional — guided practice works without one.
+        <span id="tutor-hint">AI key is optional — guided practice works without one. </span><button id="btn-open-settings" class="link">AI key</button>
       </p>
     </footer>
   </div>
@@ -260,6 +260,7 @@
         <div class="modal-actions modal-actions-split">
           <button id="btn-export" class="btn-ghost" type="button">⬇️ Export backup</button>
           <button id="btn-import" class="btn-ghost" type="button">⬆️ Restore backup</button>
+          <button id="btn-report" class="btn-ghost" type="button">⚠️ Report a mistake</button>
           <input id="file-import" type="file" accept="application/json,.json" class="hidden" />
         </div>
         <p id="data-status" class="data-status" role="status" aria-live="polite"></p>

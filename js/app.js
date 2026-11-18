@@ -9,7 +9,7 @@
 "use strict";
 
 /* ---------------- State ---------------- */
-const APP_VERSION = "2.2.1";
+const APP_VERSION = "2.3.0";
 
 const LS = {
   settings: "hiwar_settings",
@@ -24,6 +24,7 @@ const state = {
   settings: {
     baseUrl: "https://openrouter.ai/api/v1",
     apiKey: "",
+    tutorAvailable: false,
     model: "openai/gpt-4o-mini",
     tts: true,
     goal: 10,
@@ -581,7 +582,58 @@ function friendlyApiError(status) {
   return "The AI request failed (HTTP " + status + "). Check your settings, then try again.";
 }
 
+/* Is any tutor reachable? Either the learner's own key or the shared endpoint. */
+function hasAI() {
+  return Boolean(state.settings.apiKey) || state.tutorAvailable;
+}
+
+/* Ask the deployment whether a shared tutor is switched on. */
+async function probeTutor() {
+  try {
+    const res = await fetch("/api/tutor", { method: "GET" });
+    if (!res.ok) throw new Error("no endpoint");
+    const data = await res.json();
+    state.tutorAvailable = Boolean(data.configured);
+  } catch {
+    state.tutorAvailable = false;
+  }
+  renderTutorHint();
+}
+
+function renderTutorHint() {
+  const hint = $("tutor-hint");
+  if (!hint) return;
+  hint.textContent = state.tutorAvailable
+    ? "The tutor here is shared and free, with a daily limit. "
+    : "AI key is optional — guided practice works without one. ";
+  const link = $("btn-open-settings");
+  if (link) link.textContent = state.tutorAvailable ? "Your own key" : "AI key";
+}
+
+/* Talk to the shared endpoint, which holds the key on the server. */
+async function tutorCompletion(messages, maxTokens, temperature) {
+  const res = await fetch("/api/tutor", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, max_tokens: maxTokens, temperature }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.message || friendlyApiError(res.status));
+    err.code = data.error || "tutor";
+    err.status = res.status;
+    if (err.code === "not_configured") {
+      state.tutorAvailable = false;
+      renderTutorHint();
+    }
+    throw err;
+  }
+  state.tutorAvailable = true;
+  return (data.choices?.[0]?.message?.content ?? "").trim();
+}
+
 async function chatCompletion(messages, maxTokens = 400, temperature = 0.8) {
+  if (!state.settings.apiKey) return tutorCompletion(messages, maxTokens, temperature);
   const url = state.settings.baseUrl.replace(/\/+$/, "") + "/chat/completions";
   const res = await fetch(url, {
     method: "POST",
@@ -679,7 +731,7 @@ async function sendMessage(textOverride) {
   const text = (textOverride ?? $("input").value).trim();
   if (!text) return;
 
-  if (!state.settings.apiKey) {
+  if (!hasAI()) {
     if (window.HiwarGuided && window.HiwarGuided.isActive()) {
       $("input").value = "";
       window.HiwarGuided.textAnswer(text);
@@ -733,6 +785,26 @@ async function sendMessage(textOverride) {
 }
 
 /* A typed message with no key: offer the free path instead of a modal. */
+/* One tap to tell the maintainer that a line of Arabic is wrong. */
+function reportMistake() {
+  const scene = SCENARIOS[state.scenario];
+  const where = scene ? "\nScene: " + scene.label : "";
+  const body = [
+    "What is wrong? (the Arabic, the translation, the transliteration, or the app itself)",
+    "",
+    "",
+    "---",
+    "Version: " + APP_VERSION + where,
+    "Page: " + location.href,
+  ].join("\n");
+  const url =
+    "https://github.com/zynoraprime2026-dotcom/hiwar/issues/new" +
+    "?title=" + encodeURIComponent("Mistake in Hiwar: ") +
+    "&body=" + encodeURIComponent(body) +
+    "&labels=content";
+  window.open(url, "_blank", "noopener");
+}
+
 function showKeyNotice() {
   if ($("chat").querySelector(".key-notice")) return;
   const wrap = document.createElement("div");
@@ -740,7 +812,7 @@ function showKeyNotice() {
   wrap.innerHTML =
     '<div class="avatar">ح</div>' +
     '<div class="bubble">' +
-    '<div class="en">The AI tutor needs your own API key. Guided practice needs nothing at all, and it works offline.</div>' +
+    '<div class="en">The AI tutor is not reachable right now. Guided practice needs nothing at all, and it works offline.</div>' +
     '<div class="key-notice-actions">' +
     '<button type="button" class="primary" id="notice-guided">🧭 Try guided practice</button>' +
     '<button type="button" id="notice-key">⚙️ Connect a key</button>' +
@@ -768,7 +840,7 @@ function startGuidedMode() {
 let repeatPhrase = null; // {ar, en, tr}
 
 async function fetchRepeatPhrase() {
-  if (!state.settings.apiKey) { openModal("modal-settings"); return; }
+  if (!hasAI()) { showKeyNotice(); return; }
   const sc = SCENARIOS[state.scenario];
   $("repeat-phrase").textContent = "…";
   $("repeat-en").textContent = "";
@@ -891,7 +963,7 @@ async function openWordPopup(token, sentence) {
   $("btn-word-save").textContent = "💾 Save to vocabulary";
   openModal("modal-word");
 
-  if (!state.settings.apiKey) {
+  if (!hasAI()) {
     const hit = findInDictionary(word);
     if (hit) {
       currentWord.meaning = (DICT_POS[hit.pos] || hit.pos) + ": " + hit.en;
@@ -1036,9 +1108,9 @@ async function openSummary() {
   openModal("modal-summary");
 
   const recent = state.messages.slice(-20).map((m) => (m.role === "user" ? "Learner: " : "Tutor: ") + m.ar + (m.en ? " (" + m.en + ")" : ""));
-  if (!state.settings.apiKey || recent.length === 0) {
+  if (!hasAI() || recent.length === 0) {
     $("summary-recap").textContent = recent.length
-      ? "Add your API key to get an AI recap."
+      ? "The tutor is not reachable right now, so there is no recap. Guided practice still works."
       : "Start a conversation first — then come back for a recap of new words and things to practice.";
     return;
   }
@@ -1243,8 +1315,9 @@ function initInstall() {
 }
 
 /* ---------------- Init ---------------- */
-function init() {
+async function init() {
   loadSettings();
+  await probeTutor();
   populateScenarioSelect();
 
   // Version label + desktop shell integration
@@ -1292,6 +1365,7 @@ function init() {
   $("btn-settings").addEventListener("click", openSettings);
   $("btn-open-settings").addEventListener("click", openSettings);
   $("btn-save-settings").addEventListener("click", saveSettingsFromModal);
+  $("btn-report")?.addEventListener("click", reportMistake);
   $("btn-export").addEventListener("click", exportBackup);
   $("btn-import").addEventListener("click", () => $("file-import").click());
   $("file-import").addEventListener("change", (e) => {
@@ -1460,8 +1534,8 @@ function init() {
   // Home-screen shortcuts: ./?scenario=free and ./?mode=repeat
   applyLaunchParams();
 
-  // No key yet: start where the learner can actually practise
-  if (!state.settings.apiKey && !(window.HiwarGuided && window.HiwarGuided.isActive())) {
+  // Nothing reachable: start where the learner can actually practise
+  if (!hasAI() && !(window.HiwarGuided && window.HiwarGuided.isActive())) {
     startGuidedMode();
   }
   if (!loadLS("hiwar_onboarded", false)) {
