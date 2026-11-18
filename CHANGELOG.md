@@ -4,6 +4,16 @@ All notable changes to Hiwar are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.2.1] — 2026-11-18
+
+Deployed to Vercel.
+
+- The site now runs at https://hiwar-zynora1.vercel.app with deployment protection off, so it is
+  public, and every push to `main` redeploys it. GitHub Pages stays as a mirror.
+- `vercel.json` pins a static deployment: no install command (Electron must not be downloaded on the
+  builder) and no build command.
+- Canonical and social metadata now point at the Vercel domain.
+
 ## [2.2.0] — 2026-11-18
 
 Practice you can speak, a library worth coming back to, and a front page that shows the app.

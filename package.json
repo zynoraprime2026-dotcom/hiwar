@@ -1,14 +1,14 @@
 {
   "name": "hiwar",
   "productName": "Hiwar",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Hiwar (حوار) — a patient AI tutor for Arabic conversation practice. Runs in the browser, installs as a PWA, and ships as a Windows desktop app.",
   "license": "MIT",
   "author": {
     "name": "Abdul Rahim Abubakar",
     "email": "zynoraprime2026@gmail.com"
   },
-  "homepage": "https://zynoraprime2026-dotcom.github.io/hiwar/",
+  "homepage": "https://hiwar-zynora1.vercel.app/",
   "repository": {
     "type": "git",
     "url": "https://github.com/zynoraprime2026-dotcom/hiwar.git"

@@ -7,7 +7,7 @@ out loud: you talk, a warm tutor answers in Arabic, corrects you gently, and kee
 conversation moving. No account, no server, no tracking. Your practice stays on your
 own device.
 
-[**Open Hiwar in the browser**](https://zynoraprime2026-dotcom.github.io/hiwar/) ·
+[**Open Hiwar in the browser**](https://hiwar-zynora1.vercel.app/) ·
 [**Download the Windows app**](https://github.com/zynoraprime2026-dotcom/hiwar/releases/latest) ·
 [Report a problem](https://github.com/zynoraprime2026-dotcom/hiwar/issues)
 
@@ -48,6 +48,17 @@ Ummah — free to use, free to copy, free to improve.
 | 📱 **Installable everywhere** | Phone home screen, laptop window, or native Windows desktop app |
 | 🔌 **Offline-ready** | The whole app shell is cached; only the AI needs a connection |
 | 💾 **Backup & restore** | Export your streak, vocabulary and corrections to a JSON file |
+
+## Where it runs
+
+| | |
+|---|---|
+| **Vercel (primary)** | https://hiwar-zynora1.vercel.app — every push to `main` deploys automatically |
+| **GitHub Pages (mirror)** | https://zynoraprime2026-dotcom.github.io/hiwar/ |
+| **Windows 10/11** | Installer and portable `.exe` on the [releases page](https://github.com/zynoraprime2026-dotcom/hiwar/releases/latest) |
+
+`vercel.json` pins the deployment to plain static files: no install step and no build step, so
+Vercel serves `index.html` and the assets as they are.
 
 ## Get started
 
