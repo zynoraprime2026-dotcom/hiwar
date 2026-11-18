@@ -13,6 +13,8 @@ The shared tutor is switched on.
   is recognised by its prefix even when it is stored under the OpenRouter variable name.
 - One quiet retry when a free tier answers 429 or 503, and a plain-language "the tutor is busy" instead
   of a raw status.
+- The desktop app and the GitHub Pages mirror have no `/api` of their own, so they fall back to the
+  deployed endpoint, which now answers CORS preflights. The per-IP budget still applies.
 - Verified live: a visitor with no key and no account typed "مرحبا، اسمي عبدالرحمن" and got
   "أهلاً بك يا عبد الرحمن! …" in about a second.
 
