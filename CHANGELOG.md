@@ -4,6 +4,25 @@ All notable changes to Hiwar are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.2.0] — 2026-11-18
+
+Practice you can speak, a library worth coming back to, and a front page that shows the app.
+
+### Added
+- **Spoken guided practice.** Every guided reply has a *Say it* button: the microphone scores how
+  clearly you said the line, entirely on device, with no key and nothing uploaded.
+- **21 scenes tagged by level** (10 beginner, 9 intermediate, 2 advanced): numbers, time, taxi,
+  pharmacy, school, mosque, weather, doctor, hotel, airport, phone, invitations, news and storytelling
+  join the original seven. The scene picker groups them by level.
+- **Level and daily goal on the welcome screen**, saved on the device.
+- **Screenshots** in the README and on the release page, captured from the running app.
+- CI now checks the scene library: at least 21 scenes, every level represented, an AI brief for each.
+
+### Changed
+- The guided conversation stays on screen as a transcript instead of being replaced each step, so the
+  learner can compare their reply with the tutor's.
+- One scenario list now drives both guided practice and the AI tutor, so labels and levels cannot drift.
+
 ## [2.1.0] — 2026-11-18
 
 Guided practice: the app is useful the moment it opens, with no key and no account.

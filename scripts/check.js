@@ -110,12 +110,20 @@ if (notes.length) {
 /* 9. Guided practice content is complete and usable offline */
 const guidedSrc = read("js/guided.js");
 const sceneBlocks = guidedSrc.split(/\r?\n  (\w+): \{\r?\n    title:/).slice(1);
-if (sceneBlocks.length < 14) {
-  errors.push("js/guided.js: expected at least 7 guided scenes");
+if (sceneBlocks.length < 42) {
+  errors.push(`js/guided.js: expected at least 21 guided scenes, found ${sceneBlocks.length / 2}`);
+}
+for (const level of ["beginner", "intermediate", "advanced"]) {
+  if (!new RegExp(`level: "${level}"`).test(read("js/guided.js"))) {
+    errors.push(`js/guided.js: no scene is tagged level "${level}"`);
+  }
+}
+if ((read("js/guided.js").match(/ai: \{ opener:/g) || []).length < 21) {
+  errors.push("js/guided.js: every scene needs an ai.opener so the AI tutor can run it");
 }
 for (let i = 0; i < sceneBlocks.length; i += 2) {
   const key = sceneBlocks[i];
-  const body = sceneBlocks[i + 1] || "";
+  const body = (sceneBlocks[i + 1] || "").split("\n};")[0];
   const steps = (body.match(/partner: \{/g) || []).length;
   const options = (body.match(/^\s*options: \[/gm) || []).length;
   const arabic = (body.match(/ar: "/g) || []).length;

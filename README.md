@@ -13,6 +13,14 @@ own device.
 
 ---
 
+## Screenshots
+
+| Guided practice | Your reply, scored on device | Scene complete |
+|---|---|---|
+| ![Welcome screen offering free practice or the AI tutor](docs/screenshots/welcome.png) | ![A guided reply with a pronunciation score](docs/screenshots/guided-reply.png) | ![Finishing a scene](docs/screenshots/guided-complete.png) |
+
+![Built-in dictionary](docs/screenshots/dictionary.png)
+
 ## Why it exists
 
 Private tutors cost money, apps want subscriptions, and most people learning Arabic
@@ -24,16 +32,17 @@ Ummah — free to use, free to copy, free to improve.
 
 | | |
 |---|---|
-| 🧭 **Guided practice** | Seven scripted conversations that need no key, no account and no connection |
+| 🧭 **Guided practice** | 21 scripted conversations that need no key, no account and no connection |
 | 💬 **Real conversation** | Modern Standard Arabic, or Egyptian and Levantine dialect |
 | 🎤 **Voice in, voice out** | Speak your reply with the mic; tap any bubble to hear it read aloud |
 | ✏️ **Gentle corrections** | Mistakes explained in simple English with the corrected Arabic |
 | 🎧 **Listen & repeat** | The tutor speaks a phrase, you repeat it, and your pronunciation is scored |
+| 🎤 **Speak your guided replies** | Tap *Say it* on any guided line and get a score, on device, with no key |
 | 👆 **Tap to learn** | Tap any word for its meaning, then save it to your vocabulary |
 | 📖 **Built-in dictionary** | Browse alif to yāʾ, search in Arabic or English, works offline |
 | 🎯 **Study hub** | Vocabulary quiz and mistakes flashcards built from your own practice |
 | 🧾 **Session summary** | A recap of new words, weak points and what to practise next |
-| 🎭 **Seven scenarios** | Greetings, bargaining, travel, café, family, work, free conversation |
+| 🎭 **21 scenes, three levels** | Beginner to advanced: market, taxi, pharmacy, school, mosque, hotel, airport, phone, opinions and more |
 | 📊 **Three levels** | Beginner (vocalized, short), intermediate, advanced (idioms and nuance) |
 | 🔥 **Streak & daily goal** | Small daily steps instead of one heroic session |
 | 📱 **Installable everywhere** | Phone home screen, laptop window, or native Windows desktop app |
@@ -43,8 +52,8 @@ Ummah — free to use, free to copy, free to improve.
 ## Get started
 
 1. Open the app — in a browser, on a home screen, or in the Windows app.
-2. Choose **Start free practice** and work through a guided scene. Nothing to install, no key,
-   no account; it runs offline.
+2. Choose your level and daily goal, then **Start free practice** and work through a guided scene.
+   Nothing to install, no key, no account; it runs offline.
 3. When you want free conversation with corrections and voice, open **Settings ⚙️** and paste
    an API key from any OpenAI-compatible provider.
    [OpenRouter](https://openrouter.ai/keys) has a free tier; `openai/gpt-4o-mini` works well.

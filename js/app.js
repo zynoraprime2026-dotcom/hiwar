@@ -9,7 +9,7 @@
 "use strict";
 
 /* ---------------- State ---------------- */
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.2.0";
 
 const LS = {
   settings: "hiwar_settings",
@@ -40,50 +40,20 @@ const state = {
   session: { messages: 0, mistakes: 0, vocab: 0, startedAt: Date.now() },
 };
 
-const SCENARIOS = {
-  greetings: {
-    label: "Greetings & Introductions",
-    opener: "أهلاً وسهلاً! أنا أستاذ حوار. ما اسمك؟",
-    en: "Welcome! I'm Ustadh Hiwar. What is your name?",
-    brief: "The user greets you and introduces themselves. Ask their name, where they are from, and what they do.",
-  },
-  shopping: {
-    label: "Shopping & Bargaining",
-    opener: "أهلاً بك في السوق! كيف أستطيع مساعدتك اليوم؟",
-    en: "Welcome to the market! How can I help you today?",
-    brief: "You are a friendly shopkeeper in a traditional souq. The user wants to buy things, ask prices, and bargain politely.",
-  },
-  travel: {
-    label: "Travel & Directions",
-    opener: "مرحباً! تبدو حائراً. هل تبحث عن مكان معين؟",
-    en: "Hello! You look lost. Are you looking for a specific place?",
-    brief: "You are a helpful local. The user is a traveler asking for directions, transport advice, and places to visit.",
-  },
-  cafe: {
-    label: "Café & Restaurant",
-    opener: "أهلاً وسهلاً! تفضل، ماذا تحب أن تشرب؟",
-    en: "Welcome! Please, what would you like to drink?",
-    brief: "You are a waiter in a café. The user orders food and drinks, asks about the menu, and asks for the bill.",
-  },
-  family: {
-    label: "Family & Small Talk",
-    opener: "كيف حالك اليوم؟ كيف كانت أيامك؟",
-    en: "How are you today? How have your days been?",
-    brief: "You are a warm friend catching up. Talk about family, daily routine, weather, and plans.",
-  },
-  work: {
-    label: "Work & Appointments",
-    opener: "صباح الخير! حجزت موعداً اليوم. كيف يمكنني خدمتك؟",
-    en: "Good morning! You booked an appointment today. How can I help you?",
-    brief: "You are a receptionist at a company. The user books appointments, reschedules, and discusses simple work matters.",
-  },
-  free: {
-    label: "Free Conversation",
-    opener: "مرحباً! أنا مستعد للتحدث معك في أي موضوع. عمّ تريد أن نتحدث؟",
-    en: "Hello! I'm ready to talk about anything. What would you like to discuss?",
-    brief: "Open conversation on any topic the user chooses. Follow their lead naturally.",
-  },
-};
+/* One scenario list for both modes: guided practice and the AI tutor
+   read the same definitions, so labels and levels never drift apart. */
+const SCENARIOS = Object.fromEntries(
+  Object.entries((window.HiwarGuided && window.HiwarGuided.scenes) || {}).map(([key, scene]) => [
+    key,
+    {
+      label: scene.label || scene.title,
+      level: scene.level || "beginner",
+      opener: scene.ai?.opener || "",
+      en: scene.ai?.en || "",
+      brief: scene.ai?.brief || "",
+    },
+  ])
+);
 
 const LEVEL_GUIDE = {
   beginner: "The user is a BEGINNER. Use only very simple sentences (under 8 words), high-frequency vocabulary, and full vocalization (tashkeel) on every word.",
@@ -555,6 +525,7 @@ if (SR) {
   recognition.maxAlternatives = 1;
   recognition.onresult = (e) => {
     const text = e.results[0][0].transcript;
+    if (window.HiwarGuided && window.HiwarGuided.handleSpeech(text)) return;
     if (state.mode === "repeat") handleRepeatAttempt(text);
     else { $("input").value = text; sendMessage(text); }
   };
@@ -1274,6 +1245,7 @@ function initInstall() {
 /* ---------------- Init ---------------- */
 function init() {
   loadSettings();
+  populateScenarioSelect();
 
   // Version label + desktop shell integration
   const versionEl = $("app-version");
@@ -1282,6 +1254,13 @@ function init() {
     document.documentElement.dataset.shell = "desktop";
     $("btn-install").classList.add("hidden");
     window.hiwarDesktop.onNewChat(() => newConversation());
+  }
+  const savedLevel = loadLS("hiwar_level", null);
+  if (savedLevel && ["beginner", "intermediate", "advanced"].includes(savedLevel)) {
+    state.level = savedLevel;
+    document.querySelectorAll("#difficulty .seg-btn").forEach((x) =>
+      x.classList.toggle("active", x.dataset.level === state.level)
+    );
   }
   renderStreak();
   renderGoalChip();
@@ -1389,6 +1368,7 @@ function init() {
       document.querySelectorAll("#difficulty .seg-btn").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
       state.level = b.dataset.level;
+      saveLS("hiwar_level", state.level);
     })
   );
   $("dialect-select").addEventListener("change", (e) => {
@@ -1445,6 +1425,26 @@ function init() {
     fetchRepeatPhrase();
   });
 
+  // Welcome: level and daily goal chosen before the first scene
+  document.querySelectorAll("#welcome-level button").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.level = b.dataset.level;
+      document.querySelectorAll("#welcome-level button").forEach((x) => x.classList.toggle("on", x === b));
+      document.querySelectorAll("#difficulty .seg-btn").forEach((x) =>
+        x.classList.toggle("active", x.dataset.level === state.level)
+      );
+      saveLS("hiwar_level", state.level);
+    })
+  );
+  document.querySelectorAll("#welcome-goal button").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.settings.goal = Number(b.dataset.goal) || 10;
+      document.querySelectorAll("#welcome-goal button").forEach((x) => x.classList.toggle("on", x === b));
+      saveSettings();
+      renderGoalChip();
+    })
+  );
+
   // Welcome: offer the free path first, never a key wall
   $("btn-welcome-guided").addEventListener("click", () => {
     markOnboarded();
@@ -1471,6 +1471,30 @@ function init() {
 
 function markOnboarded() {
   saveLS("hiwar_onboarded", true);
+}
+
+function populateScenarioSelect() {
+  const select = $("scenario-select");
+  if (!select) return;
+  select.innerHTML = "";
+  const groups = [
+    ["beginner", "Beginner scenes"],
+    ["intermediate", "Intermediate scenes"],
+    ["advanced", "Advanced scenes"],
+  ];
+  for (const [level, title] of groups) {
+    const group = document.createElement("optgroup");
+    group.label = title;
+    for (const [key, scene] of Object.entries(SCENARIOS)) {
+      if (scene.level !== level) continue;
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = scene.label;
+      group.appendChild(option);
+    }
+    if (group.children.length) select.appendChild(group);
+  }
+  select.value = state.scenario;
 }
 
 function applyLaunchParams() {

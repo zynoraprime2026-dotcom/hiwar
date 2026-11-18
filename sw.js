@@ -1,5 +1,5 @@
 /* Hiwar service worker — offline app shell, network-first for updates */
-const CACHE = "hiwar-v8";
+const CACHE = "hiwar-v9";
 const ASSETS = [
   "./",
   "./index.html",

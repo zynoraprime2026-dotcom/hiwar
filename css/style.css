@@ -600,3 +600,37 @@ html[data-shell="desktop"] .hint { padding-bottom: 14px; }
   .guided-head { flex-direction: column; }
   .guided-step { align-self: flex-start; }
 }
+
+/* ---------- Guided extras: level badge, say-it, scoring ---------- */
+.guided-meta { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.guided-level {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim);
+}
+.guided-level-beginner { color: #34d399; border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.1); }
+.guided-level-intermediate { color: #60a5fa; border-color: rgba(96,165,250,.4); background: rgba(96,165,250,.1); }
+.guided-level-advanced { color: #c084fc; border-color: rgba(192,132,252,.4); background: rgba(192,132,252,.1); }
+.guided-say { margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,.25); }
+.guided-say-btn {
+  font: inherit; font-size: 12.5px; cursor: pointer; color: #fff;
+  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3);
+  border-radius: 999px; padding: 6px 13px;
+}
+.guided-say-btn:hover:not(:disabled) { background: rgba(255,255,255,.22); }
+.guided-say-btn:disabled { opacity: .7; cursor: default; }
+.guided-said { margin: 8px 0 4px; font-size: 12px; color: #cfe0ff; }
+.guided-verdict { margin: 6px 0 0; font-size: 12.5px; color: #fff; }
+.guided-missed { margin: 4px 0 0; font-size: 12px; color: #fde68a; }
+.msg.user .score-bar { background: rgba(0,0,0,.25); }
+
+/* ---------- Welcome rows ---------- */
+.welcome-row { margin-top: 14px; }
+.welcome-label { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+.welcome-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.welcome-chips button {
+  font: inherit; font-size: 12.5px; cursor: pointer; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 6px 13px;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.welcome-chips button:hover { border-color: var(--accent); }
+.welcome-chips button.on { border-color: var(--accent); color: var(--accent); background: rgba(45,212,191,.12); }
