@@ -1,0 +1,36 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run repository checks
+        run: node scripts/check.js
+
+      - name: Smoke-test the static build
+        run: |
+          node scripts/serve.js &
+          SERVER_PID=$!
+          sleep 2
+          for file in / /index.html /manifest.json /js/app.js /css/style.css /sw.js; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:4173${file}")
+            echo "${file} -> ${code}"
+            test "${code}" = "200"
+          done
+          kill $SERVER_PID

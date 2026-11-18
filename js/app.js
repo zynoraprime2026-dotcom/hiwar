@@ -9,6 +9,8 @@
 "use strict";
 
 /* ---------------- State ---------------- */
+const APP_VERSION = "2.0.0";
+
 const LS = {
   settings: "hiwar_settings",
   streak: "hiwar_streak",
@@ -589,6 +591,25 @@ function buildHeaders() {
   return headers;
 }
 
+function friendlyApiError(status) {
+  if (status === 401 || status === 403) {
+    return "That API key was not accepted. Open Settings ⚙️ and check the key, or create a fresh one at openrouter.ai/keys.";
+  }
+  if (status === 402) {
+    return "This API key has run out of credit. Add credit with your AI provider, or pick a free model in Settings.";
+  }
+  if (status === 404) {
+    return "The API address or model name was not found. Check the base URL and model in Settings.";
+  }
+  if (status === 429) {
+    return "Too many requests just now. Wait a few seconds, then try again.";
+  }
+  if (status >= 500) {
+    return "The AI service is having trouble right now. Please try again in a moment.";
+  }
+  return "The AI request failed (HTTP " + status + "). Check your settings, then try again.";
+}
+
 async function chatCompletion(messages, maxTokens = 400, temperature = 0.8) {
   const url = state.settings.baseUrl.replace(/\/+$/, "") + "/chat/completions";
   const res = await fetch(url, {
@@ -603,7 +624,11 @@ async function chatCompletion(messages, maxTokens = 400, temperature = 0.8) {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${body.slice(0, 200)}`);
+    // Keep the technical detail for developers, show the learner plain language.
+    console.warn("Hiwar: AI request failed", res.status, body.slice(0, 500));
+    const err = new Error(friendlyApiError(res.status));
+    err.status = res.status;
+    throw err;
   }
   const data = await res.json();
   return (data.choices?.[0]?.message?.content ?? "").trim();
@@ -1026,8 +1051,57 @@ async function openSummary() {
 }
 
 /* ---------------- Modals ---------------- */
-function openModal(id) { $(id).classList.remove("hidden"); }
-function closeModal(id) { $(id).classList.add("hidden"); }
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+let lastFocused = null;
+
+function openModal(id) {
+  const modal = $(id);
+  if (!modal) return;
+  lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  const first = modal.querySelector("[data-autofocus]") || modal.querySelector(FOCUSABLE);
+  if (first) setTimeout(() => first.focus({ preventScroll: true }), 30);
+}
+
+function closeModal(id) {
+  const modal = $(id);
+  if (!modal || modal.classList.contains("hidden")) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  if (!document.querySelector(".modal:not(.hidden)")) document.body.classList.remove("modal-open");
+  if (lastFocused && document.contains(lastFocused)) {
+    lastFocused.focus({ preventScroll: true });
+    lastFocused = null;
+  }
+}
+
+function closeTopModal() {
+  const open = [...document.querySelectorAll(".modal:not(.hidden)")];
+  const top = open[open.length - 1];
+  if (!top) return false;
+  closeModal(top.id);
+  return true;
+}
+
+function trapFocus(e) {
+  const open = [...document.querySelectorAll(".modal:not(.hidden)")];
+  const modal = open[open.length - 1];
+  if (!modal) return;
+  const items = [...modal.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 function openSettings() {
   $("set-baseurl").value = state.settings.baseUrl;
@@ -1046,6 +1120,72 @@ function saveSettingsFromModal() {
   saveSettings();
   renderGoalChip();
   closeModal("modal-settings");
+}
+
+/* ---------------- Backup & restore ---------------- */
+const BACKUP_KEYS = [LS.settings, LS.streak, LS.mistakes, LS.history, LS.vocab, LS.goal];
+
+function setDataStatus(text) {
+  const el = $("data-status");
+  if (el) el.textContent = text;
+}
+
+function exportBackup() {
+  const data = { app: "hiwar", version: APP_VERSION, exportedAt: new Date().toISOString(), data: {} };
+  for (const key of BACKUP_KEYS) {
+    const raw = localStorage.getItem(key);
+    if (raw === null) continue;
+    if (key === LS.settings) {
+      // Never put an API key in a file the learner may share or email.
+      try {
+        const clean = JSON.parse(raw);
+        delete clean.apiKey;
+        data.data[key] = JSON.stringify(clean);
+        continue;
+      } catch {
+        continue;
+      }
+    }
+    data.data[key] = raw;
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "hiwar-backup-" + stamp + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  setDataStatus("✅ Backup downloaded. Keep it somewhere safe (your API key is not included).");
+}
+
+async function importBackup(file) {
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!parsed || parsed.app !== "hiwar" || typeof parsed.data !== "object") {
+      throw new Error("not a Hiwar backup");
+    }
+    const currentKey = state.settings.apiKey;
+    let restored = 0;
+    for (const key of BACKUP_KEYS) {
+      const raw = parsed.data[key];
+      if (typeof raw !== "string") continue;
+      JSON.parse(raw); // validate before it reaches storage
+      localStorage.setItem(key, raw);
+      restored += 1;
+    }
+    // Keep the API key that is already on this device.
+    loadSettings();
+    state.settings.apiKey = currentKey;
+    saveSettings();
+    setDataStatus("✅ Restored " + restored + " data sets. Reloading…");
+    setTimeout(() => location.reload(), 900);
+  } catch {
+    setDataStatus("⚠️ That file is not a Hiwar backup. Choose the .json file you exported earlier.");
+  }
 }
 
 /* ---------------- Conversation control ---------------- */
@@ -1093,6 +1233,15 @@ function initInstall() {
 /* ---------------- Init ---------------- */
 function init() {
   loadSettings();
+
+  // Version label + desktop shell integration
+  const versionEl = $("app-version");
+  if (versionEl) versionEl.textContent = APP_VERSION;
+  if (window.hiwarDesktop?.isDesktop) {
+    document.documentElement.dataset.shell = "desktop";
+    $("btn-install").classList.add("hidden");
+    window.hiwarDesktop.onNewChat(() => newConversation());
+  }
   renderStreak();
   renderGoalChip();
 
@@ -1123,6 +1272,12 @@ function init() {
   $("btn-settings").addEventListener("click", openSettings);
   $("btn-open-settings").addEventListener("click", openSettings);
   $("btn-save-settings").addEventListener("click", saveSettingsFromModal);
+  $("btn-export").addEventListener("click", exportBackup);
+  $("btn-import").addEventListener("click", () => $("file-import").click());
+  $("file-import").addEventListener("change", (e) => {
+    importBackup(e.target.files?.[0]);
+    e.target.value = "";
+  });
   $("btn-summary").addEventListener("click", openSummary);
   $("btn-study").addEventListener("click", () => {
     showStudyLists();
@@ -1168,8 +1323,19 @@ function init() {
     b.addEventListener("click", () => closeModal(b.dataset.close))
   );
   document.querySelectorAll(".modal").forEach((m) =>
-    m.addEventListener("click", (e) => { if (e.target === m) m.classList.add("hidden"); })
+    m.addEventListener("click", (e) => { if (e.target === m) closeModal(m.id); })
   );
+
+  // Keyboard: Esc closes the top panel, Tab stays inside an open dialog
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (closeTopModal()) return;
+      if (!$("dict-panel").classList.contains("hidden")) closeDictionary();
+      else if (state.listening) startListening(); // stops an active recording
+    } else if (e.key === "Tab") {
+      trapFocus(e);
+    }
+  });
 
   // Controls
   $("scenario-select").addEventListener("change", (e) => {
@@ -1224,6 +1390,22 @@ function init() {
     previousPhrase = repeatPhrase;
     fetchRepeatPhrase();
   });
+
+  // Home-screen shortcuts: ./?scenario=free and ./?mode=repeat
+  applyLaunchParams();
+}
+
+function applyLaunchParams() {
+  const params = new URLSearchParams(location.search);
+  const scenario = params.get("scenario");
+  if (scenario && SCENARIOS[scenario]) {
+    state.scenario = scenario;
+    $("scenario-select").value = scenario;
+    newConversation();
+  }
+  if (params.get("mode") === "repeat") {
+    document.querySelector('.mode-btn[data-mode="repeat"]')?.click();
+  }
 }
 
 init();

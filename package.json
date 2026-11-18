@@ -1,0 +1,99 @@
+{
+  "name": "hiwar",
+  "productName": "Hiwar",
+  "version": "2.0.0",
+  "description": "Hiwar (حوار) — a patient AI tutor for Arabic conversation practice. Runs in the browser, installs as a PWA, and ships as a Windows desktop app.",
+  "license": "MIT",
+  "author": {
+    "name": "Abdul Rahim Abubakar",
+    "email": "zynoraprime2026@gmail.com"
+  },
+  "homepage": "https://zynoraprime2026-dotcom.github.io/hiwar/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zynoraprime2026-dotcom/hiwar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zynoraprime2026-dotcom/hiwar/issues"
+  },
+  "keywords": [
+    "arabic",
+    "language-learning",
+    "ai-tutor",
+    "pwa",
+    "electron",
+    "islamic-education"
+  ],
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "serve": "node scripts/serve.js",
+    "check": "node scripts/check.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "build": {
+    "appId": "com.hiwar.tutor",
+    "productName": "Hiwar",
+    "copyright": "Copyright © 2026 Abdul Rahim Abubakar",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "manifest.json",
+      "sw.js",
+      "css/**/*",
+      "js/**/*",
+      "fonts/**/*",
+      "icons/**/*",
+      "electron/**/*",
+      "LICENSE",
+      "README.md"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hiwar",
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.png",
+      "target": ["dmg"]
+    },
+    "linux": {
+      "category": "Education",
+      "icon": "build/icon.png",
+      "target": ["AppImage"]
+    }
+  }
+}

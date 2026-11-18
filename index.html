@@ -5,16 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hiwar — Arabic Conversation Tutor</title>
   <meta name="description" content="Hiwar (حوار): practice Arabic conversation with an AI tutor. Voice in, voice out, gentle corrections, real scenarios, listen & repeat, vocab and quizzes." />
-  <meta name="theme-color" content="#2dd4bf" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#2dd4bf" media="(prefers-color-scheme: light)" />
+  <meta name="application-name" content="Hiwar" />
+  <meta name="author" content="Abdul Rahim Abubakar" />
+  <meta name="keywords" content="learn Arabic, Arabic conversation, Arabic speaking practice, AI Arabic tutor, Modern Standard Arabic, Egyptian Arabic, Levantine Arabic, free Arabic app" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://zynoraprime2026-dotcom.github.io/hiwar/" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" href="icons/icon-192.png" />
+
+  <!-- Social sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Hiwar" />
+  <meta property="og:locale" content="en" />
+  <meta property="og:title" content="Hiwar — practice Arabic conversation with a patient AI tutor" />
+  <meta property="og:description" content="A judgment-free space to speak Arabic out loud: voice in, voice out, gentle corrections, real scenarios, listen and repeat, vocabulary and quizzes. Free, private, works offline." />
+  <meta property="og:url" content="https://zynoraprime2026-dotcom.github.io/hiwar/" />
+  <meta property="og:image" content="https://zynoraprime2026-dotcom.github.io/hiwar/icons/icon-512.png" />
+  <meta property="og:image:alt" content="Hiwar app icon: the Arabic letter ha" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Hiwar — Arabic conversation tutor" />
+  <meta name="twitter:description" content="Speak Arabic with a patient AI tutor. Voice in and out, gentle corrections, real scenarios, free and offline." />
+  <meta name="twitter:image" content="https://zynoraprime2026-dotcom.github.io/hiwar/icons/icon-512.png" />
+
+  <!-- iOS home-screen install -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Hiwar" />
+
+  <!-- Security policy: local scripts only, no remote code, API calls over https.
+       style-src needs 'unsafe-inline' because Tailwind runs locally and injects styles. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src https: http://localhost:* http://127.0.0.1:*; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'" />
   <!-- Local, offline-first assets: no CDN required -->
   <link href="css/fonts.css" rel="stylesheet" />
   <script src="js/vendor/tailwind.js"></script>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="min-h-screen">
+  <a class="skip-link" href="#input">Skip to the message box</a>
+  <noscript>
+    <div class="noscript">Hiwar needs JavaScript to talk with the AI tutor. Please enable it in your browser settings.</div>
+  </noscript>
   <div id="app" class="min-h-screen flex flex-col">
     <!-- Header -->
     <header class="topbar">
@@ -27,13 +61,17 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <div id="streak-chip" class="streak-chip" title="Practice streak">🔥 <span id="streak-count">0</span></div>
-          <div id="goal-chip" class="streak-chip goal-chip" title="Daily practice goal — change it in Settings">🎯 <span id="goal-count">0/10</span></div>
-          <button id="btn-summary" class="icon-btn" title="Session summary">🧾</button>
-          <button id="btn-study" class="icon-btn" title="Study: mistakes, vocabulary & quizzes">📚</button>
-          <button id="btn-dictionary" class="icon-btn" title="Dictionary: browse alif to yāʾ or search">📖</button>
-          <button id="btn-install" class="icon-btn" title="Install Hiwar on your phone">📥</button>
-          <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+          <div id="streak-chip" class="streak-chip" title="Practice streak" aria-label="Practice streak">
+            <span aria-hidden="true">🔥</span> <span id="streak-count">0</span>
+          </div>
+          <div id="goal-chip" class="streak-chip goal-chip" title="Daily practice goal — change it in Settings" aria-label="Daily practice goal">
+            <span aria-hidden="true">🎯</span> <span id="goal-count">0/10</span>
+          </div>
+          <button id="btn-summary" class="icon-btn" title="Session summary" aria-label="Session summary"><span aria-hidden="true">🧾</span></button>
+          <button id="btn-study" class="icon-btn" title="Study: mistakes, vocabulary and quizzes" aria-label="Study: mistakes, vocabulary and quizzes"><span aria-hidden="true">📚</span></button>
+          <button id="btn-dictionary" class="icon-btn" title="Dictionary: browse alif to yāʾ or search" aria-label="Dictionary"><span aria-hidden="true">📖</span></button>
+          <button id="btn-install" class="icon-btn" title="Install Hiwar on your phone or computer" aria-label="Install Hiwar"><span aria-hidden="true">📥</span></button>
+          <button id="btn-settings" class="icon-btn" title="Settings" aria-label="Settings"><span aria-hidden="true">⚙️</span></button>
         </div>
       </div>
     </header>
@@ -93,7 +131,7 @@
     </div>
 
     <!-- Chat -->
-    <main id="chat" class="chat flex-1"></main>
+    <main id="chat" class="chat flex-1" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation with the tutor"></main>
 
     <!-- Listen & Repeat panel -->
     <section id="repeat-panel" class="repeat-wrap flex-1 hidden">
@@ -150,16 +188,20 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
-      <p class="hint">💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it. <button id="btn-open-settings" class="link">Connect your AI key</button> to start.</p>
+      <p class="hint">
+        💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it.
+        Press <kbd>Enter</kbd> to send and <kbd>Esc</kbd> to close a panel.
+        <button id="btn-open-settings" class="link">Connect your AI key</button> to start.
+      </p>
     </footer>
   </div>
 
   <!-- Install instructions modal -->
-  <div id="modal-install" class="modal hidden">
+  <div id="modal-install" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="install-title" aria-hidden="true">
     <div class="modal-card modal-card-sm">
       <div class="modal-head">
-        <h2>Install Hiwar</h2>
-        <button class="modal-close" data-close="modal-install">×</button>
+        <h2 id="install-title">Install Hiwar</h2>
+        <button class="modal-close" aria-label="Close" data-close="modal-install">×</button>
       </div>
       <div class="modal-body">
         <p class="modal-note">Install Hiwar like a regular app — it gets its own icon, opens full-screen, and works offline.</p>
@@ -175,17 +217,28 @@
             <li>Scroll down and tap <b>Add to Home Screen</b></li>
             <li>Tap <b>Add</b></li>
           </ol>
+          <h3>💻 Windows desktop app</h3>
+          <ol>
+            <li>Open the <a href="https://github.com/zynoraprime2026-dotcom/hiwar/releases/latest" target="_blank" rel="noopener">Hiwar releases page</a></li>
+            <li>Download <b>Hiwar Setup</b> for a normal install, or the <b>portable</b> .exe to run it without installing</li>
+            <li>No admin rights needed — the installer can install for your user only</li>
+          </ol>
+          <h3>🌐 Chrome or Edge on a laptop</h3>
+          <ol>
+            <li>Click the <b>install icon</b> in the address bar, or the browser menu → <b>Install Hiwar</b></li>
+            <li>It opens in its own window and works offline</li>
+          </ol>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Settings modal -->
-  <div id="modal-settings" class="modal hidden">
+  <div id="modal-settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>Settings</h2>
-        <button class="modal-close" data-close="modal-settings">×</button>
+        <h2 id="settings-title">Settings</h2>
+        <button class="modal-close" aria-label="Close" data-close="modal-settings">×</button>
       </div>
       <div class="modal-body">
         <p class="modal-note">Hiwar talks to any OpenAI-compatible chat API. The easiest free option is <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a> — create a key and paste it below. Your key is stored only in your browser.</p>
@@ -201,16 +254,32 @@
         <div class="modal-actions">
           <button id="btn-save-settings" class="btn-primary">Save</button>
         </div>
+
+        <hr class="settings-divider" />
+
+        <label class="field-label">Your practice data</label>
+        <p class="modal-note">
+          Your streak, vocabulary, corrections and chat history live in this browser only.
+          Export a backup before switching phone, browser or computer.
+        </p>
+        <div class="modal-actions modal-actions-split">
+          <button id="btn-export" class="btn-ghost" type="button">⬇️ Export backup</button>
+          <button id="btn-import" class="btn-ghost" type="button">⬆️ Restore backup</button>
+          <input id="file-import" type="file" accept="application/json,.json" class="hidden" />
+        </div>
+        <p id="data-status" class="data-status" role="status" aria-live="polite"></p>
+
+        <p class="app-version">Hiwar <span id="app-version">2.0.0</span> · free for the Ummah · no accounts, no tracking</p>
       </div>
     </div>
   </div>
 
   <!-- Study modal: mistakes, vocabulary, quizzes -->
-  <div id="modal-study" class="modal hidden">
+  <div id="modal-study" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="study-title-head" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>Study</h2>
-        <button class="modal-close" data-close="modal-study">×</button>
+        <h2 id="study-title-head">Study</h2>
+        <button class="modal-close" aria-label="Close" data-close="modal-study">×</button>
       </div>
       <div class="modal-body">
         <div class="study-actions">
@@ -239,11 +308,11 @@
   </div>
 
   <!-- Word popup modal -->
-  <div id="modal-word" class="modal hidden">
+  <div id="modal-word" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="word-title" aria-hidden="true">
     <div class="modal-card modal-card-sm">
       <div class="modal-head">
         <h2 class="arabic" id="word-title"></h2>
-        <button class="modal-close" data-close="modal-word">×</button>
+        <button class="modal-close" aria-label="Close" data-close="modal-word">×</button>
       </div>
       <div class="modal-body">
         <p id="word-meaning" class="word-meaning">Looking up…</p>
@@ -256,11 +325,11 @@
   </div>
 
   <!-- Session summary modal -->
-  <div id="modal-summary" class="modal hidden">
+  <div id="modal-summary" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="summary-title" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>Session summary</h2>
-        <button class="modal-close" data-close="modal-summary">×</button>
+        <h2 id="summary-title">Session summary</h2>
+        <button class="modal-close" aria-label="Close" data-close="modal-summary">×</button>
       </div>
       <div class="modal-body">
         <div id="summary-stats" class="summary-stats"></div>

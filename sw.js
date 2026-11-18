@@ -1,5 +1,5 @@
 /* Hiwar service worker — offline app shell, network-first for updates */
-const CACHE = "hiwar-v6";
+const CACHE = "hiwar-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -43,6 +43,29 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const sameOrigin = new URL(e.request.url).origin === self.location.origin;
+
+  // Navigations: try the network, fall back to the cached shell so the app
+  // still opens with no connection (important for the desktop build and
+  // for learners on expensive data).
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res.ok && sameOrigin) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put("./index.html", copy));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches
+            .match("./index.html")
+            .then((hit) => hit || caches.match("./") || Response.error())
+        )
+    );
+    return;
+  }
+
   e.respondWith(
     fetch(e.request)
       .then((res) => {
@@ -56,4 +79,9 @@ self.addEventListener("fetch", (e) => {
         caches.match(e.request).then((hit) => hit || Response.error())
       )
   );
+});
+
+// Let the page activate a new version immediately when it asks.
+self.addEventListener("message", (e) => {
+  if (e.data === "SKIP_WAITING") self.skipWaiting();
 });

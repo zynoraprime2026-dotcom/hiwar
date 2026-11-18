@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# desktop build output
+dist/
+out/
+release/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.idea/
+.vscode/
+
+# local env / Vercel
+.env
+.env.*
+.vercel/
