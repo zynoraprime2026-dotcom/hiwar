@@ -4,6 +4,26 @@ All notable changes to Hiwar are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.1.0] — 2026-11-18
+
+Guided practice: the app is useful the moment it opens, with no key and no account.
+
+### Added
+- **Guided practice mode.** Seven scripted conversations (first meeting, market, directions,
+  café, family, work, open conversation) with four steps each. Every line carries Arabic,
+  transliteration, English and, where it helps, a short tip on why the reply works.
+- **Welcome screen** that offers two paths — free guided practice, or the AI tutor with
+  your own key — instead of asking for an API key before anything can happen.
+- **Inline key notice.** Typing with no key now offers guided practice in the conversation
+  itself rather than throwing a settings dialog at the learner.
+- Self-check now validates the guided content (scenes, steps, Arabic/English pairs) and
+  that the mode is wired into the app and the service worker.
+
+### Changed
+- The app opens straight into guided practice when no key is configured, so nothing is
+  gated behind setup.
+- Footer hint no longer tells people to "connect your AI key to start".
+
 ## [2.0.0] — 2026-11-18
 
 The release that turns Hiwar from a personal project into something the whole Ummah can

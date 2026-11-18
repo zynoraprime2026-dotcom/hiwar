@@ -9,7 +9,7 @@
 "use strict";
 
 /* ---------------- State ---------------- */
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.1.0";
 
 const LS = {
   settings: "hiwar_settings",
@@ -709,7 +709,12 @@ async function sendMessage(textOverride) {
   if (!text) return;
 
   if (!state.settings.apiKey) {
-    openModal("modal-settings");
+    if (window.HiwarGuided && window.HiwarGuided.isActive()) {
+      $("input").value = "";
+      window.HiwarGuided.textAnswer(text);
+      return;
+    }
+    showKeyNotice();
     return;
   }
 
@@ -754,6 +759,38 @@ async function sendMessage(textOverride) {
     $("btn-send").disabled = false;
     $("input").focus();
   }
+}
+
+/* A typed message with no key: offer the free path instead of a modal. */
+function showKeyNotice() {
+  if ($("chat").querySelector(".key-notice")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "msg msg-bot key-notice";
+  wrap.innerHTML =
+    '<div class="avatar">ح</div>' +
+    '<div class="bubble">' +
+    '<div class="en">The AI tutor needs your own API key. Guided practice needs nothing at all, and it works offline.</div>' +
+    '<div class="key-notice-actions">' +
+    '<button type="button" class="primary" id="notice-guided">🧭 Try guided practice</button>' +
+    '<button type="button" id="notice-key">⚙️ Connect a key</button>' +
+    "</div></div>";
+  $("chat").appendChild(wrap);
+  $("chat").scrollTop = $("chat").scrollHeight;
+  wrap.querySelector("#notice-guided").addEventListener("click", () => {
+    wrap.remove();
+    startGuidedMode();
+  });
+  wrap.querySelector("#notice-key").addEventListener("click", openSettings);
+}
+
+function startGuidedMode() {
+  if (!window.HiwarGuided) return;
+  document.querySelectorAll(".mode-btn").forEach((x) => x.classList.remove("active"));
+  document.querySelector('.mode-btn[data-mode="guided"]')?.classList.add("active");
+  state.mode = "guided";
+  exitRepeatMode();
+  $("dict-panel").classList.add("hidden");
+  window.HiwarGuided.start(state.scenario);
 }
 
 /* ---------------- Listen & Repeat mode ---------------- */
@@ -1190,6 +1227,10 @@ async function importBackup(file) {
 
 /* ---------------- Conversation control ---------------- */
 function newConversation() {
+  if (window.HiwarGuided && window.HiwarGuided.isActive()) {
+    window.HiwarGuided.start(state.scenario);
+    return;
+  }
   state.messages = [];
   state.session = { messages: 0, mistakes: 0, vocab: 0, startedAt: Date.now() };
   $("chat").innerHTML = "";
@@ -1340,7 +1381,8 @@ function init() {
   // Controls
   $("scenario-select").addEventListener("change", (e) => {
     state.scenario = e.target.value;
-    newConversation();
+    if (window.HiwarGuided && window.HiwarGuided.isActive()) window.HiwarGuided.start(state.scenario);
+    else newConversation();
   });
   document.querySelectorAll("#difficulty .seg-btn").forEach((b) =>
     b.addEventListener("click", () => {
@@ -1353,6 +1395,7 @@ function init() {
     state.dialect = e.target.value;
     pickArabicVoice();
     if (state.mode === "repeat") { repeatPhrase = null; fetchRepeatPhrase(); }
+    else if (window.HiwarGuided && window.HiwarGuided.isActive()) window.HiwarGuided.render();
     else newConversation();
   });
   document.querySelectorAll(".mode-btn").forEach((b) =>
@@ -1361,8 +1404,17 @@ function init() {
       b.classList.add("active");
       state.mode = b.dataset.mode;
       $("dict-panel").classList.add("hidden");
-      if (state.mode === "repeat") enterRepeatMode();
-      else exitRepeatMode();
+      if (state.mode === "repeat") {
+        if (window.HiwarGuided) window.HiwarGuided.exit();
+        enterRepeatMode();
+      } else if (state.mode === "guided") {
+        exitRepeatMode();
+        if (window.HiwarGuided) window.HiwarGuided.start(state.scenario);
+      } else {
+        if (window.HiwarGuided) window.HiwarGuided.exit();
+        exitRepeatMode();
+        newConversation();
+      }
     })
   );
   $("btn-translation").addEventListener("click", () => {
@@ -1370,7 +1422,8 @@ function init() {
     const btn = $("btn-translation");
     btn.classList.toggle("on", state.translations);
     btn.querySelector(".toggle-text").textContent = state.translations ? "On" : "Off";
-    renderAll();
+    if (window.HiwarGuided && window.HiwarGuided.isActive()) window.HiwarGuided.render();
+    else renderAll();
     $("repeat-en").textContent = state.translations && repeatPhrase?.en ? repeatPhrase.en : "";
   });
   $("btn-translit").addEventListener("click", () => {
@@ -1378,7 +1431,8 @@ function init() {
     const btn = $("btn-translit");
     btn.classList.toggle("on", state.translit);
     btn.querySelector(".toggle-text").textContent = state.translit ? "On" : "Off";
-    renderAll();
+    if (window.HiwarGuided && window.HiwarGuided.isActive()) window.HiwarGuided.render();
+    else renderAll();
     $("repeat-tr").classList.toggle("hidden", !state.translit);
   });
   $("btn-newchat").addEventListener("click", newConversation);
@@ -1391,8 +1445,32 @@ function init() {
     fetchRepeatPhrase();
   });
 
+  // Welcome: offer the free path first, never a key wall
+  $("btn-welcome-guided").addEventListener("click", () => {
+    markOnboarded();
+    closeModal("modal-welcome");
+    startGuidedMode();
+  });
+  $("btn-welcome-ai").addEventListener("click", () => {
+    markOnboarded();
+    closeModal("modal-welcome");
+    openSettings();
+  });
+
   // Home-screen shortcuts: ./?scenario=free and ./?mode=repeat
   applyLaunchParams();
+
+  // No key yet: start where the learner can actually practise
+  if (!state.settings.apiKey && !(window.HiwarGuided && window.HiwarGuided.isActive())) {
+    startGuidedMode();
+  }
+  if (!loadLS("hiwar_onboarded", false)) {
+    openModal("modal-welcome");
+  }
+}
+
+function markOnboarded() {
+  saveLS("hiwar_onboarded", true);
 }
 
 function applyLaunchParams() {

@@ -1,10 +1,11 @@
 /* Hiwar service worker — offline app shell, network-first for updates */
-const CACHE = "hiwar-v7";
+const CACHE = "hiwar-v8";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
+  "./js/guided.js",
   "./js/dictionary.js",
   "./js/vendor/tailwind.js",
   "./css/fonts.css",

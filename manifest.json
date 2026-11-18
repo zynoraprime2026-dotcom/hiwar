@@ -2,22 +2,46 @@
   "id": "/hiwar/",
   "name": "Hiwar — Arabic Conversation Tutor",
   "short_name": "Hiwar",
-  "version": "2.0.0",
-  "description": "Practice Arabic conversation with a patient AI tutor. Voice in and out, gentle corrections, real scenarios, listen and repeat, vocabulary and quizzes. Free, private and offline-ready.",
+  "version": "2.1.0",
+  "description": "Hiwar (حوار) — practise Arabic conversation. Guided dialogues work offline with no setup; the AI tutor adds free conversation, corrections and voice.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "categories": ["education", "productivity", "lifestyle"],
+  "categories": [
+    "education",
+    "productivity",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
     {

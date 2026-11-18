@@ -106,6 +106,31 @@ if (notes.length) {
   for (const note of notes) console.log("  • " + note);
 }
 
+
+/* 9. Guided practice content is complete and usable offline */
+const guidedSrc = read("js/guided.js");
+const sceneBlocks = guidedSrc.split(/\n  (\w+): \{\n    title:/).slice(1);
+if (sceneBlocks.length < 14) {
+  errors.push("js/guided.js: expected at least 7 guided scenes");
+}
+for (let i = 0; i < sceneBlocks.length; i += 2) {
+  const key = sceneBlocks[i];
+  const body = sceneBlocks[i + 1] || "";
+  const steps = (body.match(/partner: \{/g) || []).length;
+  const options = (body.match(/^\s*options: \[/gm) || []).length;
+  const arabic = (body.match(/ar: "/g) || []).length;
+  const english = (body.match(/en: "/g) || []).length;
+  if (steps < 3) errors.push(`js/guided.js: scene "${key}" has only ${steps} steps`);
+  if (options !== steps) errors.push(`js/guided.js: scene "${key}" has ${options} option blocks for ${steps} steps`);
+  if (arabic !== english || arabic === 0) {
+    errors.push(`js/guided.js: scene "${key}" has ${arabic} Arabic lines but ${english} English lines`);
+  }
+}
+if (!/HiwarGuided/.test(guidedSrc)) errors.push("js/guided.js: must expose window.HiwarGuided");
+if (!exists("js/guided.js")) errors.push("js/guided.js: missing");
+if (!/js\/guided\.js/.test(read("sw.js"))) errors.push("sw.js: js/guided.js is not precached");
+if (!/data-mode="guided"/.test(html)) errors.push("index.html: no Guided mode button");
+
 if (errors.length) {
   console.error(`\n✖ ${errors.length} problem(s) found:\n`);
   for (const err of errors) console.error("  • " + err);

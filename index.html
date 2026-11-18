@@ -111,6 +111,7 @@
           <label class="control-label">Mode</label>
           <div id="mode-seg" class="seg">
             <button class="seg-btn mode-btn active" data-mode="chat">💬 Chat</button>
+            <button class="seg-btn mode-btn" data-mode="guided">🧭 Guided</button>
             <button class="seg-btn mode-btn" data-mode="repeat">🎧 Repeat</button>
           </div>
         </div>
@@ -191,7 +192,7 @@
       <p class="hint">
         💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it.
         Press <kbd>Enter</kbd> to send and <kbd>Esc</kbd> to close a panel.
-        <button id="btn-open-settings" class="link">Connect your AI key</button> to start.
+        <button id="btn-open-settings" class="link">AI key</button> is optional — guided practice works without one.
       </p>
     </footer>
   </div>
@@ -338,7 +339,32 @@
     </div>
   </div>
 
+  <!-- Welcome: choose a path instead of demanding a key -->
+  <div id="modal-welcome" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-hidden="true">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-head">
+        <h2 id="welcome-title">Welcome to Hiwar <span class="arabic">حوار</span></h2>
+        <button class="modal-close" aria-label="Close" data-close="modal-welcome">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="welcome-lead">Speak Arabic out loud, make mistakes, and get gentle corrections. No account, nothing uploaded, works offline.</p>
+        <div class="welcome-choices">
+          <button id="btn-welcome-guided" class="welcome-choice primary" type="button">
+            <b>Start free practice</b>
+            <span>Guided dialogues you can do right now. No setup, no key.</span>
+          </button>
+          <button id="btn-welcome-ai" class="welcome-choice" type="button">
+            <b>Use the AI tutor</b>
+            <span>Free conversation with corrections and voice. Needs your own API key.</span>
+          </button>
+        </div>
+        <p class="welcome-note">You can switch between the two at any time, and your progress is kept on this device only.</p>
+      </div>
+    </div>
+  </div>
+
   <script src="js/dictionary.js"></script>
+  <script src="js/guided.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
