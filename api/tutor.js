@@ -20,9 +20,35 @@
  */
 
 const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
+const GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const GATEWAY = "https://ai-gateway.vercel.sh/v1/chat/completions";
-const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 const DEFAULT_GATEWAY_MODEL = "openai/gpt-4o-mini";
+
+/* Which provider can answer? An explicit Gemini key wins, then an
+   OpenRouter key, then the Vercel AI Gateway token. Keys pasted from Google
+   AI Studio start with AQ. or AIza, so they are recognised even when they
+   were saved under the OpenRouter name. */
+function pickProvider() {
+  const model = process.env.TUTOR_MODEL;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (geminiKey) {
+    return { name: "gemini", url: GEMINI, key: geminiKey, model: model || DEFAULT_GEMINI_MODEL };
+  }
+  const other = process.env.OPENROUTER_API_KEY;
+  if (other) {
+    const looksGoogle = /^(AQ\.|AIza)/.test(other);
+    return looksGoogle
+      ? { name: "gemini", url: GEMINI, key: other, model: model || DEFAULT_GEMINI_MODEL }
+      : { name: "openrouter", url: OPENROUTER, key: other, model: model || DEFAULT_OPENROUTER_MODEL };
+  }
+  const gatewayToken = process.env.VERCEL_OIDC_TOKEN;
+  if (gatewayToken) {
+    return { name: "vercel-gateway", url: GATEWAY, key: gatewayToken, model: model || DEFAULT_GATEWAY_MODEL };
+  }
+  return null;
+}
 
 const MAX_MESSAGES = 14;
 const MAX_CHARS_PER_MESSAGE = 1200;
@@ -69,11 +95,7 @@ function cleanMessages(input) {
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
-  const openrouterKey = process.env.OPENROUTER_API_KEY;
-  const gatewayToken = process.env.VERCEL_OIDC_TOKEN;
-  const viaGateway = !openrouterKey && Boolean(gatewayToken);
-  const key = openrouterKey || gatewayToken;
-  const model = process.env.TUTOR_MODEL || (viaGateway ? DEFAULT_GATEWAY_MODEL : DEFAULT_MODEL);
+  const provider = pickProvider();
   const perIpLimit = Number(process.env.TUTOR_DAILY_PER_IP || 40);
   const totalLimit = Number(process.env.TUTOR_DAILY_TOTAL || 1500);
 
@@ -81,10 +103,10 @@ module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     rollDay();
     return res.status(200).json({
-      configured: Boolean(key),
-      provider: key ? (viaGateway ? "vercel-gateway" : "openrouter") : null,
-      model: key ? model : null,
-      remainingToday: key ? Math.max(0, totalLimit - global.count) : 0,
+      configured: Boolean(provider),
+      provider: provider ? provider.name : null,
+      model: provider ? provider.model : null,
+      remainingToday: provider ? Math.max(0, totalLimit - global.count) : 0,
     });
   }
 
@@ -93,7 +115,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
-  if (!key) {
+  if (!provider) {
     return res.status(503).json({
       error: "not_configured",
       message: "The shared tutor is not switched on for this deployment yet.",
@@ -129,29 +151,35 @@ module.exports = async function handler(req, res) {
   try {
     const headers = {
       "Content-Type": "application/json",
-      Authorization: "Bearer " + key,
+      Authorization: "Bearer " + provider.key,
     };
-    if (!viaGateway) {
+    if (provider.name === "openrouter") {
       headers["HTTP-Referer"] = "https://hiwar-zynora1.vercel.app";
       headers["X-Title"] = "Hiwar Arabic Tutor";
     }
-    const upstream = await fetch(viaGateway ? GATEWAY : OPENROUTER, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: Math.min(Number(body.max_tokens) || 400, MAX_TOKENS),
-        temperature: Math.min(Math.max(Number(body.temperature) || 0.8, 0), 1.2),
-      }),
+    const payload = JSON.stringify({
+      model: provider.model,
+      messages,
+      max_tokens: Math.min(Number(body.max_tokens) || 400, MAX_TOKENS),
+      temperature: Math.min(Math.max(Number(body.temperature) || 0.8, 0), 1.2),
     });
+
+    // Free tiers spike: one quiet retry before giving up.
+    let upstream = await fetch(provider.url, { method: "POST", headers, body: payload });
+    if (upstream.status === 503 || upstream.status === 429) {
+      await new Promise((r) => setTimeout(r, 500));
+      upstream = await fetch(provider.url, { method: "POST", headers, body: payload });
+    }
 
     const text = await upstream.text();
     if (!upstream.ok) {
       // Hand back the status only: never echo provider internals to the browser.
-      return res.status(upstream.status === 429 ? 429 : 502).json({
-        error: "upstream",
-        message: "The tutor is having trouble right now. Please try again in a moment.",
+      const busy = upstream.status === 429 || upstream.status === 503;
+      return res.status(busy ? 503 : 502).json({
+        error: busy ? "busy" : "upstream",
+        message: busy
+          ? "The tutor is busy right now. Wait a moment and try again."
+          : "The tutor is having trouble right now. Please try again in a moment.",
         status: upstream.status,
       });
     }
