@@ -634,3 +634,46 @@ html[data-shell="desktop"] .hint { padding-bottom: 14px; }
 }
 .welcome-chips button:hover { border-color: var(--accent); }
 .welcome-chips button.on { border-color: var(--accent); color: var(--accent); background: rgba(45,212,191,.12); }
+
+/* ── Arabic interface (dir="rtl") ─────────────────────────────────────────────
+   The markup is written left-to-right, so RTL only needs the handful of places
+   that hard-code a side. Everything already using logical properties
+   (margin-inline-start, inset-inline-end) mirrors on its own. Arabic content
+   keeps its own direction either way. */
+[dir="rtl"] .btn-ghost { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .bubble .en,
+[dir="rtl"] .bubble .tr,
+[dir="rtl"] .repeat-sub,
+[dir="rtl"] .repeat-result,
+[dir="rtl"] .quiz-opt,
+[dir="rtl"] .install-steps ol { text-align: right; }
+[dir="rtl"] .guided-option,
+[dir="rtl"] .guided-choices .guided-option { text-align: right; }
+[dir="rtl"] .msg-bot .bubble { border-top-left-radius: 14px; border-top-right-radius: 4px; }
+[dir="rtl"] .msg.user .bubble { border-bottom-right-radius: 14px; border-bottom-left-radius: 4px; }
+[dir="rtl"] .install-steps ol { padding-right: 0; padding-left: 18px; }
+[dir="rtl"] .dict-clear { inset-inline-end: 10px; }
+[dir="rtl"] .bubble .ar,
+[dir="rtl"] .repeat-phrase,
+[dir="rtl"] .quiz-word,
+[dir="rtl"] .arabic { direction: rtl; }
+[dir="rtl"] .topbar-inner,
+[dir="rtl"] .controls-inner,
+[dir="rtl"] .composer-inner { direction: rtl; }
+[dir="rtl"] .control-label,
+[dir="rtl"] .field-label,
+[dir="rtl"] .check-label,
+[dir="rtl"] .modal-note,
+[dir="rtl"] .welcome-lead,
+[dir="rtl"] .welcome-note,
+[dir="rtl"] .welcome-label,
+[dir="rtl"] .study-title,
+[dir="rtl"] .data-status { text-align: right; }
+[dir="rtl"] .lang-seg { direction: rtl; }
+/* Latin words inside an Arabic layout (model names, URLs) stay readable */
+[dir="rtl"] .bubble .en,
+[dir="rtl"] .dict-word-en,
+[dir="rtl"] code,
+[dir="rtl"] input[type="url"],
+[dir="rtl"] #set-baseurl,
+[dir="rtl"] #set-model { direction: ltr; text-align: right; unicode-bidi: isolate; }

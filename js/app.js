@@ -1394,7 +1394,28 @@ async function init() {
 
   // Topbar
   $("btn-settings").addEventListener("click", openSettings);
-  $("btn-open-settings").addEventListener("click", openSettings);
+
+
+/* ── interface language ───────────────────────────────────────────────────── */
+function syncLangButtons(lang) {
+  const seg = $("lang-seg");
+  if (!seg) return;
+  seg.querySelectorAll(".seg-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.lang === lang);
+  });
+}
+if (window.HiwarI18n) {
+  const seg = $("lang-seg");
+  if (seg) {
+    seg.addEventListener("click", (e) => {
+      const btn = e.target.closest(".seg-btn");
+      if (!btn) return;
+      window.HiwarI18n.setLang(btn.dataset.lang);
+    });
+  }
+  window.HiwarI18n.onChange(syncLangButtons);
+  syncLangButtons(window.HiwarI18n.lang);
+}  $("btn-open-settings").addEventListener("click", openSettings);
   $("btn-save-settings").addEventListener("click", saveSettingsFromModal);
   $("btn-report")?.addEventListener("click", reportMistake);
   $("btn-export").addEventListener("click", exportBackup);
