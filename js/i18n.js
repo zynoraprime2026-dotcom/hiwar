@@ -197,6 +197,52 @@
     }
   };
 
+  /* Sentences whose words are interleaved with live elements (the composer hint
+     holds the "AI key" button and the Enter/Esc keys). Only the element's own text
+     nodes are swapped, so the children and their listeners survive. */
+  var FRAGMENTS = {
+    "#composer .hint": [
+      "💡 تكلّم أو اكتب بالعربية. اضغط أي كلمة من المعلّم لتتعلّمها، وأي فقاعة لتسمعها. اضغط",
+      "للإرسال، و",
+      "لإغلاق أي لوحة."
+    ]
+  };
+
+  var fragmentOriginals = new Map();
+
+  function applyFragments() {
+    Object.keys(FRAGMENTS).forEach(function (selector) {
+      var el = document.querySelector(selector);
+      if (!el) return;
+      if (!fragmentOriginals.has(selector)) {
+        var saved = [];
+        Array.prototype.forEach.call(el.childNodes, function (n) {
+          if (n.nodeType === 3 && n.nodeValue.trim()) saved.push(n.nodeValue);
+        });
+        fragmentOriginals.set(selector, saved);
+      }
+      var wanted = FRAGMENTS[selector];
+      var index = 0;
+      Array.prototype.forEach.call(el.childNodes, function (n) {
+        if (n.nodeType !== 3 || !n.nodeValue.trim()) return;
+        if (index < wanted.length) n.nodeValue = " " + wanted[index++] + " ";
+      });
+    });
+  }
+
+  function restoreFragments() {
+    fragmentOriginals.forEach(function (saved, selector) {
+      var el = document.querySelector(selector);
+      if (!el) return;
+      var index = 0;
+      Array.prototype.forEach.call(el.childNodes, function (n) {
+        if (n.nodeType !== 3 || !n.nodeValue.trim()) return;
+        if (index < saved.length) n.nodeValue = saved[index++];
+      });
+    });
+    fragmentOriginals.clear();
+  }
+
   var originals = new WeakMap(); // node/attribute holder -> original value
   var blockOriginals = new Map(); // selector -> original innerHTML
   var current = "en";
@@ -313,9 +359,11 @@
       translateText(root);
       translateAttrs(root);
       applyBlocks();
+      applyFragments();
       translateText(root); // strings that live inside a replaced block
     } else {
       restoreBlocks();
+      restoreFragments();
       restoreText(root);
       restoreAttrs(root);
     }
