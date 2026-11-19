@@ -1,6 +1,6 @@
 /* ================================================================
    Hiwar (حوار) — Guided practice
-   Scripted conversations that work with no account and no API key,
+   Scripted conversations that work with no account and no setup,
    fully offline. Each scene is a short exchange: the partner speaks,
    the learner picks a reply (and hears it), the scene moves on.
    The AI tutor stays available as an upgrade, never a gate.
@@ -1568,14 +1568,18 @@ function guidedFinishCard() {
 
   const upgrade = guidedEl("p", "guided-upgrade");
   upgrade.innerHTML =
-    "Guided practice scores how clearly you say each line, but it will not hold a free conversation or correct new sentences. " +
-    'An AI key unlocks that. <button class="link" id="btn-guided-key">Add a key</button>';
+    "Guided practice scores how clearly you say each line, but it will not hold a free conversation. " +
+    '<button class="link" id="btn-guided-ai">Talk to the AI tutor</button>';
   card.appendChild(upgrade);
 
   chat.appendChild(card);
   chat.scrollTop = chat.scrollHeight;
-  $("btn-guided-key")?.addEventListener("click", () => {
-    if (typeof openSettings === "function") openSettings();
+  $("btn-guided-ai")?.addEventListener("click", () => {
+    if (typeof startChatMode === "function") startChatMode();
+    else {
+      const btn = document.querySelector('.mode-btn[data-mode="chat"]');
+      if (btn) btn.click();
+    }
   });
 }
 

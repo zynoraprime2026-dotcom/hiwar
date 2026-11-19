@@ -4,17 +4,32 @@ All notable changes to Hiwar are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
-## 2.4.0
+## [2.4.0] — 2026-11-19
 
-- Arabic interface with a real RTL layout. A language switch in Settings flips the
-  document to `dir="rtl"` and translates the chrome: scenario names, levels,
-  dialects, modes, panels, buttons, and the notes in Settings and Install.
-- Strings are translated at runtime from an English table, so switching back
-  restores the original nodes exactly. Sentences split across `<b>` and `<a>` are
-  replaced as whole blocks to keep Arabic word order.
-- Latin text (model names, URLs) keeps LTR isolation inside the Arabic layout.
-- The tutor's replies, guided dialogues and dictionary entries stay as data, and
-  are not translated by the interface.
+Arabic first, and no more API keys. Two changes that make Hiwar feel like a language app
+rather than a developer tool.
+
+### Added
+- **Arabic interface with a real RTL layout.** A language switch flips the document to
+  `dir="rtl"` and translates the chrome: scenario names, levels, dialects, modes, panels,
+  buttons, and the notes in Settings and Install.
+- Strings are translated at runtime from an English table, so switching back restores the
+  original nodes exactly. Sentences split across `<b>` and `<a>` are replaced as whole blocks
+  to keep Arabic word order.
+- Latin text (names, URLs) keeps LTR isolation inside the Arabic layout.
+- The tutor's replies, guided dialogues and dictionary entries stay as data, and are not
+  translated by the interface.
+
+### Changed
+- **Settings is a learner's screen.** Provider, model and key fields are gone; what is left is
+  your daily goal, auto-speak, backup, restore and report a mistake.
+- **The welcome screen sells nothing technical.** The two paths are "Start free practice" and
+  "Talk to the AI tutor", both free, neither asking for an account.
+- **Footer reads "Free to use, no account needed."** When the tutor is unreachable the notice
+  says so plainly and offers a retry, instead of pointing at settings.
+- **Guided practice ends with "Talk to the AI tutor"** rather than "Add a key".
+- Error messages, the word popup and the backup confirmation no longer mention keys.
+
 
 ## [2.3.1] — 2026-11-18
 

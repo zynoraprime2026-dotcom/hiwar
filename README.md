@@ -84,14 +84,14 @@ Vercel serves `index.html` and the assets as they are.
 
 1. Open the app — in a browser, on a home screen, or in the Windows app.
 2. Choose your level and daily goal, then **Start free practice** and work through a guided scene.
-   Nothing to install, no key, no account; it runs offline.
-3. When you want free conversation with corrections and voice, open **Settings ⚙️** and paste
-   an API key from any OpenAI-compatible provider.
-   [OpenRouter](https://openrouter.ai/keys) has a free tier; `openai/gpt-4o-mini` works well.
-4. Pick a scenario and level, then speak or type in Arabic.
+   Nothing to install, no account; it runs offline.
+3. Tap **Talk to the AI tutor** whenever you want free conversation with corrections and voice.
+   It is free and there is nothing to set up.
+4. Pick a scene and level, then speak or type in Arabic.
 
-Your key is stored only on your own device, is never sent anywhere except the AI
-provider you chose, and is deliberately **left out of exported backups**.
+There is no key, no sign-up and no settings screen for providers. The tutor is a small
+serverless endpoint that keeps one key on the server; see *Deploy the web app* if you are
+running your own copy.
 
 ## Install
 
@@ -164,9 +164,9 @@ sw.js               offline cache and navigation fallback
 
 ## Privacy
 
-No accounts, no analytics, no backend. Streak, vocabulary, corrections, chat history
-and your API key live in `localStorage` on your device. The only outbound request is to
-the AI endpoint you configure. See [SECURITY.md](SECURITY.md).
+No accounts, no analytics, no tracking. Streak, vocabulary, corrections and chat history
+live in `localStorage` on your device. The only outbound request is the conversation itself,
+which goes to the tutor endpoint and is not stored there. See [SECURITY.md](SECURITY.md).
 
 ## Contributing
 

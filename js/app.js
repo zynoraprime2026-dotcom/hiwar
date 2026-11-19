@@ -586,10 +586,10 @@ function buildHeaders() {
 
 function friendlyApiError(status) {
   if (status === 401 || status === 403) {
-    return "That API key was not accepted. Open Settings ⚙️ and check the key, or create a fresh one at openrouter.ai/keys.";
+    return "The tutor could not sign in just now. Try again in a moment, or keep practising with guided scenes.";
   }
   if (status === 402) {
-    return "This API key has run out of credit. Add credit with your AI provider, or pick a free model in Settings.";
+    return "The free tutor allowance is used up for now. Guided practice still works, and it needs nothing.";
   }
   if (status === 404) {
     return "The API address or model name was not found. Check the base URL and model in Settings.";
@@ -635,10 +635,8 @@ function renderTutorHint() {
   const hint = $("tutor-hint");
   if (!hint) return;
   hint.textContent = state.tutorAvailable
-    ? "The tutor here is shared and free, with a daily limit. "
-    : "AI key is optional — guided practice works without one. ";
-  const link = $("btn-open-settings");
-  if (link) link.textContent = state.tutorAvailable ? "Your own key" : "AI key";
+    ? "Free to use, no account needed."
+    : "Guided practice works offline. The AI tutor is offline right now.";
 }
 
 /* Talk to the shared endpoint, which holds the key on the server. */
@@ -846,7 +844,7 @@ function showKeyNotice() {
     '<div class="en">The AI tutor is not reachable right now. Guided practice needs nothing at all, and it works offline.</div>' +
     '<div class="key-notice-actions">' +
     '<button type="button" class="primary" id="notice-guided">🧭 Try guided practice</button>' +
-    '<button type="button" id="notice-key">⚙️ Connect a key</button>' +
+    '<button type="button" id="notice-key">🔄 Try again</button>' +
     "</div></div>";
   $("chat").appendChild(wrap);
   $("chat").scrollTop = $("chat").scrollHeight;
@@ -854,7 +852,16 @@ function showKeyNotice() {
     wrap.remove();
     startGuidedMode();
   });
-  wrap.querySelector("#notice-key").addEventListener("click", openSettings);
+  wrap.querySelector("#notice-key").addEventListener("click", async () => {
+    wrap.remove();
+    await probeTutor();
+    if (state.tutorAvailable) {
+      renderTutorHint();
+      showToast("The tutor is back. Say something in Arabic.");
+    } else {
+      showKeyNotice();
+    }
+  });
 }
 
 function startGuidedMode() {
@@ -1001,7 +1008,7 @@ async function openWordPopup(token, sentence) {
       $("word-meaning").textContent = currentWord.meaning;
       $("btn-word-save").disabled = false;
     } else {
-      $("word-meaning").textContent = "Add your API key in Settings for full lookups — or find the word in the built-in dictionary (📖).";
+      $("word-meaning").textContent = "This word is not in the built-in dictionary. Try another form of it, or ask the tutor about it in conversation.";
     }
     return;
   }
@@ -1215,17 +1222,11 @@ function trapFocus(e) {
 }
 
 function openSettings() {
-  $("set-baseurl").value = state.settings.baseUrl;
-  $("set-apikey").value = state.settings.apiKey;
-  $("set-model").value = state.settings.model;
   $("set-goal").value = state.settings.goal;
   $("set-tts").checked = state.settings.tts;
   openModal("modal-settings");
 }
 function saveSettingsFromModal() {
-  state.settings.baseUrl = $("set-baseurl").value.trim() || "https://openrouter.ai/api/v1";
-  state.settings.apiKey = $("set-apikey").value.trim();
-  state.settings.model = $("set-model").value.trim() || "openai/gpt-4o-mini";
   state.settings.goal = Math.min(100, Math.max(1, parseInt($("set-goal").value, 10) || 10));
   state.settings.tts = $("set-tts").checked;
   saveSettings();
@@ -1269,7 +1270,7 @@ function exportBackup() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  setDataStatus("✅ Backup downloaded. Keep it somewhere safe (your API key is not included).");
+  setDataStatus("✅ Backup downloaded. Keep it somewhere safe.");
 }
 
 async function importBackup(file) {
@@ -1396,6 +1397,7 @@ async function init() {
   $("btn-settings").addEventListener("click", openSettings);
 
 
+
 /* ── interface language ───────────────────────────────────────────────────── */
 function syncLangButtons(lang) {
   const seg = $("lang-seg");
@@ -1415,7 +1417,7 @@ if (window.HiwarI18n) {
   }
   window.HiwarI18n.onChange(syncLangButtons);
   syncLangButtons(window.HiwarI18n.lang);
-}  $("btn-open-settings").addEventListener("click", openSettings);
+}  $("btn-open-settings")?.addEventListener("click", openSettings);
   $("btn-save-settings").addEventListener("click", saveSettingsFromModal);
   $("btn-report")?.addEventListener("click", reportMistake);
   $("btn-export").addEventListener("click", exportBackup);

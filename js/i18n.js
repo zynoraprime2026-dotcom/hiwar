@@ -64,9 +64,6 @@
 
     // ── settings ────────────────────────────────────────────────────────────
     "Settings": "الإعدادات",
-    "API Base URL": "عنوان الواجهة البرمجية",
-    "API Key": "المفتاح",
-    "Model": "النموذج",
     "Daily goal (practice steps per day)": "الهدف اليومي (خطوات التدريب في اليوم)",
     "Auto-speak assistant replies aloud": "نطق ردود المعلّم تلقائيًا",
     "Save": "حفظ",
@@ -94,11 +91,20 @@
     "Generating recap…": "أُعِدّ الملخّص…",
     "Welcome to Hiwar": "مرحبًا بك في حوار",
     "Start free practice": "ابدأ التدريب المجاني",
-    "Guided dialogues you can do right now. No setup, no key.":
-      "حوارات موجَّهة تبدأها الآن، بلا إعداد وبلا مفتاح.",
+    "Guided dialogues you can do right now, even offline. No setup.":
+      "حوارات موجَّهة تبدأها الآن، حتى دون إنترنت، وبلا إعداد.",
     "Use the AI tutor": "استخدم المعلّم الذكي",
-    "Free conversation with corrections and voice. Needs your own API key.":
-      "محادثة حرّة مع تصحيح ونطق، وتحتاج مفتاحك الخاص.",
+    "Real conversation with gentle corrections and voice. Free, no account.":
+      "محادثة حقيقية مع تصحيح رفيق ونطق، مجانًا وبلا حساب.",
+    "Free to use, no account needed.": "مجاني للاستخدام، بلا حساب.",
+    "Guided practice works offline. The AI tutor is offline right now.":
+      "التدريب الموجَّه يعمل دون إنترنت، والمعلّم الذكي غير متاح الآن.",
+    "The AI tutor is offline right now. Guided practice needs nothing at all, and it works offline.":
+      "المعلّم الذكي غير متاح الآن. التدريب الموجَّه لا يحتاج شيئًا ويعمل دون إنترنت.",
+    "Talk to the AI tutor": "تحدّث مع المعلّم الذكي",
+    "Try again": "حاول مرة أخرى",
+    "This word is not in the built-in dictionary. Try another form of it, or ask the tutor about it in conversation.":
+      "هذه الكلمة ليست في القاموس المدمج. جرّب صيغة أخرى منها، أو اسأل المعلّم عنها في المحادثة.",
     "Your level": "مستواك",
     "Daily goal": "الهدف اليومي",
     "5 replies": "٥ ردود",
@@ -179,9 +185,6 @@
         "<li>يفتح في نافذته الخاصة ويعمل دون إنترنت</li>",
         "</ol>"
       ].join("");
-    },
-    "#modal-settings .modal-body > p.modal-note:first-of-type": function () {
-      return "يتصل حوار بأي واجهة محادثة متوافقة مع OpenAI. وأسهل خيار مجاني هو OpenRouter: أنشئ مفتاحًا وألصقه أدناه. مفتاحك محفوظ في متصفحك وحده.";
     },
     "#modal-settings .modal-body > p.modal-note:last-of-type": function () {
       return "سلسلة تدريبك ومفرداتك وتصحيحاتك وسجل محادثاتك محفوظة في هذا المتصفح وحده. صدّر نسخة احتياطية قبل تغيير الهاتف أو المتصفح أو الحاسوب.";

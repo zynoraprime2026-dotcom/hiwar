@@ -186,7 +186,7 @@
       <p class="hint">
         💡 Speak or type in Arabic. Tap any tutor word to learn it; tap a bubble to hear it.
         Press <kbd>Enter</kbd> to send and <kbd>Esc</kbd> to close a panel.
-        <span id="tutor-hint">AI key is optional — guided practice works without one. </span><button id="btn-open-settings" class="link">AI key</button>
+        <span id="tutor-hint">Free to use, no account needed.</span>
       </p>
     </footer>
   </div>
@@ -236,13 +236,6 @@
         <button class="modal-close" aria-label="Close" data-close="modal-settings">×</button>
       </div>
       <div class="modal-body">
-        <p class="modal-note">Hiwar talks to any OpenAI-compatible chat API. The easiest free option is <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a> — create a key and paste it below. Your key is stored only in your browser.</p>
-        <label class="field-label">API Base URL</label>
-        <input id="set-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" />
-        <label class="field-label">API Key</label>
-        <input id="set-apikey" type="password" placeholder="sk-or-…" />
-        <label class="field-label">Model</label>
-        <input id="set-model" type="text" placeholder="openai/gpt-4o-mini" />
         <label class="field-label">Daily goal (practice steps per day)</label>
         <input id="set-goal" type="number" min="1" max="100" value="10" />
         <label class="check-label"><input id="set-tts" type="checkbox" checked /> Auto-speak assistant replies aloud</label>
@@ -352,11 +345,11 @@
         <div class="welcome-choices">
           <button id="btn-welcome-guided" class="welcome-choice primary" type="button">
             <b>Start free practice</b>
-            <span>Guided dialogues you can do right now. No setup, no key.</span>
+            <span>Guided dialogues you can do right now, even offline. No setup.</span>
           </button>
           <button id="btn-welcome-ai" class="welcome-choice" type="button">
             <b>Use the AI tutor</b>
-            <span>Free conversation with corrections and voice. Needs your own API key.</span>
+            <span>Real conversation with gentle corrections and voice. Free, no account.</span>
           </button>
         </div>
         <div class="welcome-row">
