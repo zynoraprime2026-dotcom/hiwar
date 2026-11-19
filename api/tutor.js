@@ -3,8 +3,8 @@
  *
  * Why this exists: the AI tutor used to need a personal API key, which is the
  * single biggest thing that stopped people from using Hiwar. This function
- * keeps ONE key on the server so any visitor can hold a real conversation,
- * while the key itself never reaches the browser.
+ * keeps the keys on the server so any visitor can hold a real conversation,
+ * while the keys themselves never reach the browser.
  *
  * Safety rails, because the endpoint is public:
  *   - the model, token ceiling and temperature are set here, never by the client
@@ -12,47 +12,74 @@
  *   - a per-IP daily budget plus a global daily ceiling stop runaway spend
  *   - no conversation is logged or stored; requests pass through untouched
  *
- * Configuration (Vercel → Project → Settings → Environment Variables):
- *   OPENROUTER_API_KEY  required, a free OpenRouter key is enough
- *   TUTOR_MODEL         optional, defaults to a free OpenRouter model
+ * Providers are tried in order, so a free tier that is spiking or a model that
+ * has been retired does not take the tutor down:
+ *   1. Google Gemini (a key from Google AI Studio starts with AQ. or AIza)
+ *   2. OpenRouter (a key starts with sk-or-)
+ *   3. The Vercel AI Gateway, when the project has an OIDC token
+ *
+ * Configuration (Vercel -> Project -> Settings -> Environment Variables):
+ *   GEMINI_API_KEY      a Google AI Studio key, the fastest of the free options
+ *   OPENROUTER_API_KEY  an OpenRouter key, used when Gemini cannot answer
+ *   TUTOR_MODEL         optional, forces one model instead of the default list
  *   TUTOR_DAILY_PER_IP  optional, default 40
  *   TUTOR_DAILY_TOTAL   optional, default 1500
  */
 
-const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
 const GATEWAY = "https://ai-gateway.vercel.sh/v1/chat/completions";
-const DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
-const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
-const DEFAULT_GATEWAY_MODEL = "openai/gpt-4o-mini";
 
-/* Which provider can answer? An explicit Gemini key wins, then an
-   OpenRouter key, then the Vercel AI Gateway token. Keys pasted from Google
-   AI Studio start with AQ. or AIza, so they are recognised even when they
-   were saved under the OpenRouter name. */
-function pickProvider() {
-  const model = process.env.TUTOR_MODEL;
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (geminiKey) {
-    return { name: "gemini", url: GEMINI, key: geminiKey, model: model || DEFAULT_GEMINI_MODEL };
-  }
-  const other = process.env.OPENROUTER_API_KEY;
-  if (other) {
-    const looksGoogle = /^(AQ\.|AIza)/.test(other);
-    return looksGoogle
-      ? { name: "gemini", url: GEMINI, key: other, model: model || DEFAULT_GEMINI_MODEL }
-      : { name: "openrouter", url: OPENROUTER, key: other, model: model || DEFAULT_OPENROUTER_MODEL };
-  }
-  const gatewayToken = process.env.VERCEL_OIDC_TOKEN;
-  if (gatewayToken) {
-    return { name: "vercel-gateway", url: GATEWAY, key: gatewayToken, model: model || DEFAULT_GATEWAY_MODEL };
-  }
-  return null;
-}
+const GEMINI_MODELS = ["gemini-flash-lite-latest", "gemini-3.8-flash"];
+// Free OpenRouter models move around; two are kept so one retirement is survivable.
+const OPENROUTER_MODELS = [
+  "baidu/ernie-5.5-flash-preview:free",
+  "inclusionai/ling-3.2-flash:free",
+];
+const GATEWAY_MODELS = ["openai/gpt-4o-mini"];
 
 const MAX_MESSAGES = 14;
 const MAX_CHARS_PER_MESSAGE = 1200;
 const MAX_TOKENS = 500;
+const MAX_ATTEMPTS = 4;
+
+/* Ordered list of {name, url, key, models}. Empty when nothing is configured. */
+function buildProviders() {
+  const forced = process.env.TUTOR_MODEL;
+  const providers = [];
+
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (geminiKey) {
+    providers.push({
+      name: "gemini",
+      url: GEMINI,
+      key: geminiKey,
+      models: forced ? [forced] : GEMINI_MODELS,
+    });
+  }
+
+  // A Google key saved under the OpenRouter name is still a Gemini key.
+  const other = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY;
+  if (other) {
+    const looksGoogle = /^(AQ\.|AIza)/.test(other);
+    providers.push(
+      looksGoogle
+        ? { name: "gemini", url: GEMINI, key: other, models: forced ? [forced] : GEMINI_MODELS }
+        : { name: "openrouter", url: OPENROUTER, key: other, models: forced ? [forced] : OPENROUTER_MODELS }
+    );
+  }
+
+  if (process.env.VERCEL_OIDC_TOKEN) {
+    providers.push({
+      name: "vercel-gateway",
+      url: GATEWAY,
+      key: process.env.VERCEL_OIDC_TOKEN,
+      models: forced ? [forced] : GATEWAY_MODELS,
+    });
+  }
+
+  return providers;
+}
 
 // Best-effort counters. Serverless instances are short-lived, so these are a
 // speed bump, not a wall; the global ceiling is the real cost guard.
@@ -92,6 +119,36 @@ function cleanMessages(input) {
   return out.length ? out : null;
 }
 
+async function askProvider(provider, model, messages, maxTokens, temperature) {
+  const headers = { "Content-Type": "application/json", Authorization: "Bearer " + provider.key };
+  if (provider.name === "openrouter") {
+    headers["HTTP-Referer"] = "https://hiwar-zynora1.vercel.app";
+    headers["X-Title"] = "Hiwar Arabic Tutor";
+  }
+  const body = JSON.stringify({
+    model,
+    messages,
+    max_tokens: maxTokens,
+    temperature,
+  });
+
+  let upstream = await fetch(provider.url, { method: "POST", headers, body });
+  // Free tiers spike briefly: one quiet retry of the same model.
+  if (upstream.status === 503 || upstream.status === 429) {
+    await new Promise((r) => setTimeout(r, 500));
+    upstream = await fetch(provider.url, { method: "POST", headers, body });
+  }
+
+  const text = await upstream.text();
+  if (!upstream.ok) {
+    return { ok: false, status: upstream.status };
+  }
+  const data = safeParse(text);
+  const content = data?.choices?.[0]?.message?.content?.trim();
+  if (!content) return { ok: false, status: 204 };
+  return { ok: true, content };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   // The desktop app and the GitHub Pages mirror call this endpoint from
@@ -105,18 +162,20 @@ module.exports = async function handler(req, res) {
     return res.status(204).end();
   }
 
-  const provider = pickProvider();
+  const providers = buildProviders();
   const perIpLimit = Number(process.env.TUTOR_DAILY_PER_IP || 40);
   const totalLimit = Number(process.env.TUTOR_DAILY_TOTAL || 1500);
 
   // GET is the availability probe the app uses at boot.
   if (req.method === "GET") {
     rollDay();
+    const first = providers[0];
     return res.status(200).json({
-      configured: Boolean(provider),
-      provider: provider ? provider.name : null,
-      model: provider ? provider.model : null,
-      remainingToday: provider ? Math.max(0, totalLimit - global.count) : 0,
+      configured: providers.length > 0,
+      provider: first ? first.name : null,
+      providers: providers.map((p) => p.name),
+      model: first ? first.models[0] : null,
+      remainingToday: providers.length ? Math.max(0, totalLimit - global.count) : 0,
     });
   }
 
@@ -125,7 +184,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
-  if (!provider) {
+  if (!providers.length) {
     return res.status(503).json({
       error: "not_configured",
       message: "The shared tutor is not switched on for this deployment yet.",
@@ -150,7 +209,7 @@ module.exports = async function handler(req, res) {
   }
 
   const body = typeof req.body === "string" ? safeParse(req.body) : req.body || {};
-  const messages = cleanMessages(body.messages);
+  const messages = cleanMessages(body?.messages);
   if (!messages) {
     return res.status(400).json({ error: "bad_request", message: "No messages were sent." });
   }
@@ -158,58 +217,44 @@ module.exports = async function handler(req, res) {
   perIp.set(ip, used + 1);
   global.count += 1;
 
+  const maxTokens = Math.min(Number(body.max_tokens) || 400, MAX_TOKENS);
+  const temperature = Math.min(Math.max(Number(body.temperature) || 0.8, 0), 1.2);
+
+  let attempts = 0;
+  let lastStatus = 0;
   try {
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + provider.key,
-    };
-    if (provider.name === "openrouter") {
-      headers["HTTP-Referer"] = "https://hiwar-zynora1.vercel.app";
-      headers["X-Title"] = "Hiwar Arabic Tutor";
+    for (const provider of providers) {
+      for (const model of provider.models) {
+        if (attempts >= MAX_ATTEMPTS) break;
+        attempts += 1;
+        const result = await askProvider(provider, model, messages, maxTokens, temperature);
+        if (result.ok) {
+          return res.status(200).json({
+            choices: [{ message: { role: "assistant", content: result.content } }],
+            provider: provider.name,
+            model,
+            remainingToday: Math.max(0, totalLimit - global.count),
+          });
+        }
+        lastStatus = result.status;
+      }
     }
-    const payload = JSON.stringify({
-      model: provider.model,
-      messages,
-      max_tokens: Math.min(Number(body.max_tokens) || 400, MAX_TOKENS),
-      temperature: Math.min(Math.max(Number(body.temperature) || 0.8, 0), 1.2),
-    });
-
-    // Free tiers spike: one quiet retry before giving up.
-    let upstream = await fetch(provider.url, { method: "POST", headers, body: payload });
-    if (upstream.status === 503 || upstream.status === 429) {
-      await new Promise((r) => setTimeout(r, 500));
-      upstream = await fetch(provider.url, { method: "POST", headers, body: payload });
-    }
-
-    const text = await upstream.text();
-    if (!upstream.ok) {
-      // Hand back the status only: never echo provider internals to the browser.
-      const busy = upstream.status === 429 || upstream.status === 503;
-      return res.status(busy ? 503 : 502).json({
-        error: busy ? "busy" : "upstream",
-        message: busy
-          ? "The tutor is busy right now. Wait a moment and try again."
-          : "The tutor is having trouble right now. Please try again in a moment.",
-        status: upstream.status,
-      });
-    }
-
-    const data = safeParse(text);
-    const content = data?.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      return res.status(502).json({ error: "empty", message: "The tutor sent nothing back. Try again." });
-    }
-
-    return res.status(200).json({
-      choices: [{ message: { role: "assistant", content } }],
-      remainingToday: Math.max(0, totalLimit - global.count),
-    });
   } catch (err) {
     return res.status(502).json({
       error: "network",
       message: "The tutor could not be reached. Please try again.",
     });
   }
+
+  // Hand back a plain-language reason only: never echo provider internals.
+  const busy = lastStatus === 429 || lastStatus === 503;
+  return res.status(busy ? 503 : 502).json({
+    error: busy ? "busy" : "upstream",
+    message: busy
+      ? "The tutor is busy right now. Wait a moment and try again."
+      : "The tutor is having trouble right now. Please try again in a moment.",
+    status: lastStatus,
+  });
 };
 
 function safeParse(text) {
