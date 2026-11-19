@@ -74,7 +74,7 @@ const swAssets = [...sw.matchAll(/"\.\/([^"]*)"/g)].map((m) => m[1]).filter(Bool
 for (const asset of swAssets) {
   if (!exists(asset)) errors.push(`sw.js precaches a missing file: ${asset}`);
 }
-if (!/hiwar-v\d+/.test(sw)) errors.push("sw.js: cache name must look like hiwar-v<number>");
+if (!/hiwar-v\d/.test(sw)) errors.push("sw.js: cache name must look like hiwar-v<version>");
 
 /* 5. Manifest sanity */
 const manifest = parsed["manifest.json"];
@@ -94,6 +94,13 @@ if (manifest) {
 
 /* 6. Version drift */
 const pkg = parsed["package.json"];
+/* A shipped asset behind an unchanged cache name is invisible to anyone who has
+   already installed the app: the browser keeps serving the old copy. Tying the
+   cache to the package version makes that mistake impossible to miss. */
+const swCache = (sw.match(/const CACHE = "([^"]+)"/) || [])[1];
+if (pkg && swCache && !swCache.includes(pkg.version)) {
+  errors.push(`sw.js cache ${swCache} does not carry the package version ${pkg.version}`);
+}
 if (pkg && manifest && manifest.version && manifest.version !== pkg.version) {
   errors.push(
     `version drift: package.json ${pkg.version} vs manifest.json ${manifest.version}`
