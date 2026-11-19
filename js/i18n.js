@@ -94,7 +94,6 @@
     "Use the AI tutor": "استخدم المعلّم الذكي",
     "Real conversation with gentle corrections and voice. Free, no account.":
       "محادثة حقيقية مع تصحيح رفيق ونطق، مجانًا وبلا حساب.",
-    "Free to use, no account needed.": "مجاني للاستخدام، بلا حساب.",
     "Guided practice works offline. The AI tutor is offline right now.":
       "التدريب الموجَّه يعمل دون إنترنت، والمعلّم الذكي غير متاح الآن.",
     "The AI tutor is offline right now. Guided practice needs nothing at all, and it works offline.":
