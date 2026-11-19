@@ -107,6 +107,28 @@
     "You can switch between the two at any time, and your progress is kept on this device only.":
       "يمكنك التنقّل بين الوضعين في أي وقت، وتقدّمك محفوظ على هذا الجهاز وحده.",
 
+    // ── scenario labels (data-driven, rendered into the select and the cards) ──
+    "Shopping & Bargaining": "التسوّق والمساومة",
+    "Travel & Directions": "السفر والاتجاهات",
+    "Café & Restaurant": "المقهى والمطعم",
+    "Family & Small Talk": "العائلة والحديث العابر",
+    "Work & Appointments": "العمل والمواعيد",
+    "Free Conversation": "محادثة حرّة",
+    "Numbers & Prices": "الأرقام والأسعار",
+    "Time & Days": "الوقت والأيام",
+    "Taking a Taxi": "في سيارة الأجرة",
+    "At the Pharmacy": "في الصيدلية",
+    "At School": "في المدرسة",
+    "At the Mosque": "في المسجد",
+    "Weather & Seasons": "الطقس والفصول",
+    "At the Doctor": "عند الطبيب",
+    "Hotel Check-in": "تسجيل الوصول في الفندق",
+    "At the Airport": "في المطار",
+    "On the Phone": "على الهاتف",
+    "Invitations & Visiting": "الدعوات والزيارة",
+    "News & Opinions": "الأخبار والآراء",
+    "Telling a Story": "حكاية قصة",
+
     // ── attributes ──────────────────────────────────────────────────────────
     "Practice streak": "سلسلة التدريب",
     "Daily practice goal": "الهدف اليومي",
@@ -157,6 +179,12 @@
         "<li>يفتح في نافذته الخاصة ويعمل دون إنترنت</li>",
         "</ol>"
       ].join("");
+    },
+    "#modal-settings .modal-body > p.modal-note:first-of-type": function () {
+      return "يتصل حوار بأي واجهة محادثة متوافقة مع OpenAI. وأسهل خيار مجاني هو OpenRouter: أنشئ مفتاحًا وألصقه أدناه. مفتاحك محفوظ في متصفحك وحده.";
+    },
+    "#modal-settings .modal-body > p.modal-note:last-of-type": function () {
+      return "سلسلة تدريبك ومفرداتك وتصحيحاتك وسجل محادثاتك محفوظة في هذا المتصفح وحده. صدّر نسخة احتياطية قبل تغيير الهاتف أو المتصفح أو الحاسوب.";
     },
     "#modal-welcome .welcome-lead": function () {
       return "تحدّث العربية بصوت مسموع، وأخطئ، واحصل على تصحيح رفيق. بلا حساب، ولا شيء يُرفع، ويعمل دون إنترنت.";
