@@ -58,15 +58,19 @@ function buildProviders() {
     });
   }
 
-  // A Google key saved under the OpenRouter name is still a Gemini key.
-  const other = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY;
-  if (other) {
-    const looksGoogle = /^(AQ\.|AIza)/.test(other);
-    providers.push(
-      looksGoogle
-        ? { name: "gemini", url: GEMINI, key: other, models: forced ? [forced] : GEMINI_MODELS }
-        : { name: "openrouter", url: OPENROUTER, key: other, models: forced ? [forced] : OPENROUTER_MODELS }
-    );
+  // Each variable is read on its own: a key saved under the OpenRouter name may
+  // still be a Google key, and it must never hide the real OpenRouter key.
+  const seen = new Set(providers.map((p) => p.key));
+  const candidates = [process.env.OPENROUTER_KEY, process.env.OPENROUTER_API_KEY].filter(Boolean);
+  for (const key of candidates) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const looksGoogle = /^(AQ\.|AIza)/.test(key);
+    const provider = looksGoogle
+      ? { name: "gemini", url: GEMINI, key, models: forced ? [forced] : GEMINI_MODELS }
+      : { name: "openrouter", url: OPENROUTER, key, models: forced ? [forced] : OPENROUTER_MODELS };
+    if (providers.some((p) => p.name === provider.name && p.key === provider.key)) continue;
+    providers.push(provider);
   }
 
   if (process.env.VERCEL_OIDC_TOKEN) {
