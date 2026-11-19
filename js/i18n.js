@@ -51,9 +51,7 @@
 
     // ── composer / hints ────────────────────────────────────────────────────
     "Listening…": "أستمع…",
-    "AI key is optional — guided practice works without one.":
-      "مفتاح الذكاء الاصطناعي اختياري — التدريب الموجَّه يعمل بدونه.",
-    "AI key": "مفتاح الذكاء الاصطناعي",
+    "Free to use, no account needed.": "مجاني بلا حساب.",
 
     // ── install modal ───────────────────────────────────────────────────────
     "Install Hiwar": "تثبيت حوار",
